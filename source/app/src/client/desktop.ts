@@ -1,6 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
 import { setLanguage, getLanguage } from './i18n.js';
+import { setRefreshSeconds } from './refresh.js';
 
 let source = localStorage.getItem('lotus-source') || 'openai';
 export function getSource() { return source; }
@@ -9,11 +10,16 @@ let initialization: Promise<void> | undefined;
 let sourceListening = false;
 let refreshListening = false;
 let languageListening = false;
+let refreshIntervalListening = false;
 const originalFetch = window.fetch.bind(window);
 export function initializeDesktop(): Promise<void> {
   return initialization ??= connectDesktop().catch(error => { initialization=undefined; throw error; });
 }
 async function connectDesktop() {
+  if(isTauri()&&!refreshIntervalListening) {
+    await listen<number>('lotus-refresh-interval',event=>setRefreshSeconds(event.payload));
+    refreshIntervalListening=true;
+  }
   if(isTauri() && !languageListening) {
     await listen<'en'|'zh'>('lotus-language',event=>setLanguage(event.payload));
     languageListening=true;
@@ -42,7 +48,7 @@ async function connectDesktop() {
   };
   setLanguage(getLanguage());
 }
-export function reportDesktop(stage: 'ready' | 'data' | 'failed') {
+export function reportDesktop(stage: 'ready' | 'data' | 'failed' | 'drag-settled') {
   if(isTauri()) void invoke('renderer_status',{stage}).catch(()=>{});
 }
 export async function nativeCommand(command: string, args?: Record<string, unknown>) {

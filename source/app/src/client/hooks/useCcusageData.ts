@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const DEFAULT_INTERVAL_MS = 60_000; // 60 秒自动刷新
+import { useRefreshSeconds } from '../refresh.js';
 
-export function useCcusageData<T>(fetcher: (refresh?: boolean) => Promise<T>, intervalMs: number = DEFAULT_INTERVAL_MS) {
+export function useCcusageData<T>(fetcher: (refresh?: boolean) => Promise<T>, intervalMs?:number) {
+  const seconds=useRefreshSeconds();
+  const delay=intervalMs??seconds*1000;
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +34,12 @@ export function useCcusageData<T>(fetcher: (refresh?: boolean) => Promise<T>, in
 
   // 定时自动刷新
   useEffect(() => {
-    if (intervalMs <= 0) return;
-    timerRef.current = setInterval(() => { if (!document.hidden) void fetchData(false); }, intervalMs);
+    if (delay <= 0) return;
+    timerRef.current = setInterval(() => { if (!document.hidden) void fetchData(false); }, delay);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [fetchData, intervalMs]);
+  }, [fetchData, delay]);
 
   const refetch = useCallback(() => fetchData(true), [fetchData]);
 

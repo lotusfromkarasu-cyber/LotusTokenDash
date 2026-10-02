@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchSessionAnalytics } from '../api/client.js';
+import { useRefreshSeconds } from '../refresh.js';
 import type { SessionAnalyticsResponse } from '../../shared/types.js';
 
 export interface SessionAnalyticsFilters {
@@ -12,6 +13,7 @@ export interface SessionAnalyticsFilters {
 
 /** Owns request identity, pagination and stale-data retention for the Sessions tab. */
 export function useSessionAnalytics(filters: SessionAnalyticsFilters, refreshVersion: number) {
+  const refreshSeconds=useRefreshSeconds();
   const { agent, project, range, model, status } = filters;
   const [data, setData] = useState<SessionAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,11 @@ export function useSessionAnalytics(filters: SessionAnalyticsFilters, refreshVer
   }, [agent, project, range, model, status, debouncedQuery, cursor]);
 
   useEffect(() => { void load(refreshVersion > 0); }, [load, refreshVersion]);
+  useEffect(()=>{
+    if(!refreshSeconds)return;
+    const timer=setInterval(()=>{if(!document.hidden)void load(false);},refreshSeconds*1000);
+    return ()=>clearInterval(timer);
+  },[load,refreshSeconds]);
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const nextPage = useCallback(() => {

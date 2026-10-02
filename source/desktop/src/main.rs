@@ -5,6 +5,7 @@ use tauri::menu::{Menu, MenuItem, CheckMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use serde::{Serialize, Deserialize};
 mod diagnostics;
+mod pointer;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Address { port: u16, token: String }
@@ -12,6 +13,8 @@ struct Address { port: u16, token: String }
 struct Layout { mode: String, scale: f64, x: i32, y: i32, #[serde(default="enabled")] topmost: bool }
 #[derive(Clone, Serialize)]
 struct LayoutSnapshot { #[serde(flatten)] layout:Layout, revision:u64 }
+#[derive(Serialize)]
+struct DragTicket {revision:u64, #[serde(rename="waitsForRelease")] waits_for_release:bool}
 fn enabled() -> bool { true }
 impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true } } }
 struct Service {
@@ -87,7 +90,9 @@ async fn set_layout(app: tauri::AppHandle, mode: String, expanded: bool, scale: 
     }).await.map_err(|e|e.to_string())?
 }
 #[tauri::command]
-fn begin_drag(state:tauri::State<'_,Service>) -> u64 {state.layout_revision.fetch_add(1,Ordering::SeqCst)+1}
+fn begin_drag(state:tauri::State<'_,Service>) -> DragTicket {
+    DragTicket {revision:state.layout_revision.fetch_add(1,Ordering::SeqCst)+1,waits_for_release:cfg!(windows)}
+}
 #[cfg(windows)]
 fn left_button_down() -> bool {
     #[link(name="user32")]
@@ -252,6 +257,7 @@ fn main() {
                 }
             }
             if diagnostics::enabled() { diagnostics::run(handle); }
+            else { pointer::watch(handle); }
             Ok(())
         });
     let app=builder.build(tauri::generate_context!()).expect("Unable to start LotusTokenDash");

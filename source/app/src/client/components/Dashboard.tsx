@@ -1,4 +1,5 @@
 import { t, locale } from '../i18n.js';
+import { useRefreshSeconds } from '../refresh.js';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import {
@@ -190,6 +191,7 @@ function filterProjectDaily(projects: Record<string, DailyEntry[]>, project: str
 /* ---- Main Dashboard ---- */
 
 export function Dashboard() {
+  const refreshSeconds=useRefreshSeconds();
   const [agentsInfo, setAgentsInfo] = useState<AgentsResponse | null>(null);
   const [agentsLoading, setAgentsLoading] = useState(true);
 
@@ -698,7 +700,7 @@ export function Dashboard() {
               <button
                 onClick={handleRefreshAll}
                 disabled={dailyData.loading}
-                title={t("刷新数据（每 60 秒自动刷新）")}
+                title={`${t('Refresh data')} · ${refreshSeconds?t('Every {seconds} seconds',{seconds:refreshSeconds}):t('Manual')}`}
                 className="flex items-center justify-center w-8 h-8 rounded-lg text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg className={`w-4 h-4 ${dailyData.loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -3,10 +3,12 @@ import { Dashboard } from './Dashboard.js';
 import { getSource, setSource } from '../desktop.js';
 import type { QuotaSnapshot } from '../../server/quota/types.js';
 import { t, useLanguage, setLanguage, locale } from '../i18n.js';
+import { useRefreshSeconds,setRefreshSeconds,refreshOptions } from '../refresh.js';
 
 type Source = { id: string; label: string; sessions: number };
 export function LotusShell() {
   const language=useLanguage();
+  const refreshSeconds=useRefreshSeconds();
   const [sources, setSources] = useState<Source[]>([{ id: 'openai', label: 'OpenAI 官方', sessions: 0 }]);
   const [source, choose] = useState(getSource());
   const [quotas, setQuotas] = useState<QuotaSnapshot[]>([]);
@@ -16,8 +18,8 @@ export function LotusShell() {
     const change=()=>choose(getSource()); window.addEventListener('lotus-source-change',change);
     void fetch('/api/lotus/sources').then(res => res.ok ? res.json() : []).then(setSources).catch(() => {});
     const refresh = () => { if (!document.hidden) void fetch('/api/quota').then(res => res.json()).then(data => setQuotas(data.providers ?? [])).catch(() => {}); };
-    refresh(); const timer = setInterval(refresh, 180_000); return () => { clearInterval(timer); window.removeEventListener('lotus-source-change',change); };
-  }, []);
+    refresh(); const timer = refreshSeconds?setInterval(refresh,refreshSeconds*1000):undefined; return () => { clearInterval(timer); window.removeEventListener('lotus-source-change',change); };
+  }, [refreshSeconds]);
   const change = (id: string) => { setSource(id); choose(id); };
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('Validating…');
@@ -30,6 +32,7 @@ export function LotusShell() {
       <div className="lotus-brand"><span className="lotus-symbol">✳</span><div><b>LotusTokenDash</b><small>{t('LOCAL USAGE · CLEAR PERSPECTIVE')}</small></div></div>
       <label className="lotus-source">{t('Codex source')}<select aria-label={t('Codex data source')} value={source} onChange={e => change(e.target.value)}>{sources.map(item => <option value={item.id} key={item.id}>{item.id==='openai'?t('OpenAI Official'):item.id==='unknown'?t('Unknown source'):item.label} · {item.sessions}</option>)}</select></label>
       <select className="lotus-language" aria-label="Language / 语言" value={language} onChange={event=>setLanguage(event.target.value as 'en'|'zh')}><option value="zh">中文</option><option value="en">English</option></select>
+      <label className="lotus-refresh-setting">{t('Auto refresh')}<select aria-label={t('Refresh interval')} value={refreshSeconds} onChange={event=>setRefreshSeconds(Number(event.target.value))}>{refreshOptions.map(seconds=><option key={seconds} value={seconds}>{seconds===0?t('Manual'):seconds===30?t('30 seconds'):t('{minutes} min',{minutes:seconds/60})}</option>)}</select></label>
       <button className="lotus-button" onClick={() => showSettings(!settings)}>{t('Quota settings')}</button>
     </header>
     <div className="lotus-scope-note">{t('Codex sources are counted separately · Costs are model price estimates · Subscription quota uses the official API')}</div>

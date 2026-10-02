@@ -53,4 +53,42 @@ describe('HUD user interactions',()=>{
     for(let i=0;i<20;i++)await instance.scale(-.1);
     expect(displayed().scale).toBe(.75);
   });
+  it('Windows release can settle even if the move-loop promise never resolves',async()=>{
+    let release!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;});
+    const command=vi.fn(async(name:string)=>{
+      if(name==='begin_drag')return {revision:1,waitsForRelease:true};
+      if(name==='finish_drag')await held;
+      return {mode:'strip',scale:1,revision:1};
+    });
+    const {instance,displayed}=controller(command as never);
+    const dragging=instance.drag(()=>new Promise(()=>{}));
+    await vi.waitFor(()=>expect(command).toHaveBeenCalledWith('finish_drag',{revision:1}));
+    instance.hover(true); // An enter that arrives before the native result.
+    release();await dragging;
+    await vi.waitFor(()=>expect(displayed()).toMatchObject({mode:'strip',expanded:true}));
+  });
+  it.each(['hud','strip'] as const)('native hover restores a %s drag without another DOM mouseenter',async(mode)=>{
+    const command=vi.fn(async(name:string)=>name==='begin_drag'?{revision:2,waitsForRelease:true}:{mode:'strip',scale:1,revision:2});
+    const {instance,displayed}=controller(command as never);
+    instance.receive({mode,scale:1,revision:1});
+    await instance.drag(async()=>{});
+    expect(displayed()).toMatchObject({mode:'strip',expanded:false});
+    instance.receiveHover(true,2);
+    await vi.waitFor(()=>expect(displayed().expanded).toBe(true));
+  });
+  it('repeated outside signals do not postpone collapse indefinitely',async()=>{
+    vi.useFakeTimers();
+    const {instance,displayed}=controller();
+    instance.hover(false);
+    await vi.advanceTimersByTimeAsync(150);instance.hover(false);
+    await vi.advanceTimersByTimeAsync(150);
+    expect(displayed().expanded).toBe(false);
+  });
+  it('a stale native hover cannot reopen a newer collapsed layout',async()=>{
+    const {instance,displayed}=controller();
+    instance.receive({mode:'strip',scale:1,revision:5});
+    instance.receiveHover(true,4);
+    expect(displayed().expanded).toBe(false);
+  });
 });

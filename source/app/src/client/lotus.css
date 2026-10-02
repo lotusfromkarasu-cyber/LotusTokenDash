@@ -31,3 +31,4 @@ body { font-family:"Segoe UI Variable","Segoe UI","PingFang SC",system-ui,sans-s
 .bg-white { background:#fffdfa!important; }
 .recharts-cartesian-grid line { stroke:#e0d8cf; }
 @media(max-width:760px) { .lotus-header { padding:18px; gap:12px; flex-wrap:wrap; } .lotus-scope-note {padding:10px 18px;} .lotus-quotas {padding:12px 18px;} }
+.lotus-header{flex-wrap:wrap;gap:14px}.lotus-refresh-setting{display:flex;flex-direction:column;gap:4px;font-size:10px;color:#766e6c;white-space:nowrap}.lotus-refresh-setting select{height:30px;padding:0 8px;border:1px solid #af83693d;border-radius:7px;background:#fffdf5;color:#22222b;font-family:inherit;font-size:12px}

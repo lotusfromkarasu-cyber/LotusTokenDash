@@ -1,5 +1,6 @@
 export const zh: Record<string,string> = {
   'Language':'语言', 'Usage analytics':'使用分析', 'LOCAL USAGE · CLEAR PERSPECTIVE':'本地用量 · 清晰洞察',
+  'Auto refresh':'自动刷新', 'Refresh interval':'刷新间隔', 'Manual':'手动', '30 seconds':'30 秒', '{minutes} min':'{minutes} 分钟', 'Every {seconds} seconds':'每 {seconds} 秒自动刷新',
   'Codex source':'Codex 来源', 'Codex data source':'Codex 数据来源', 'Quota settings':'配额设置',
   'Subscription quota':'订阅配额', 'OpenAI Official':'OpenAI 官方', 'Unknown source':'未识别来源',
   'Codex sources are counted separately · Costs are model price estimates · Subscription quota uses the official API':'Codex 按来源独立统计 · 金额为模型价格估算 · 订阅额度使用官方配额接口',
@@ -10,7 +11,7 @@ export const zh: Record<string,string> = {
   'Today tokens':'今日 Token', 'Cache hit':'缓存命中率', 'Source':'统计来源', 'LIVE':'实时', 'Cached':'缓存',
   'Connecting':'连接中', 'Disconnected':'未连接', 'Open analysis':'打开完整分析窗口', 'Hide to tray':'隐藏到托盘',
   'Refresh usage':'刷新统计', 'Dock to top bar':'吸附顶部细条', 'Restore floating HUD':'恢复悬浮 HUD',
-  'Increase HUD size':'放大 HUD', 'Decrease HUD size':'缩小 HUD', 'Official quota unavailable':'官方配额暂不可用',
+  'Increase HUD size':'放大 HUD', 'Decrease HUD size':'缩小 HUD', 'HUD size':'HUD 尺寸', 'Dock':'吸附', 'Float':'释放', 'Official quota unavailable':'官方配额暂不可用',
   'Quota request failed ({status})':'配额读取失败（{status}）', 'Usage request failed ({status})':'统计读取失败（{status}）',
   'Cannot open analysis: {error}':'分析窗口打开失败：{error}', 'Quota window unavailable':'官方接口尚未提供此窗口',
   'Local data service unavailable':'本地数据服务连接失败', 'Connecting to local data service…':'正在连接本地数据服务…',
