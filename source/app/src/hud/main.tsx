@@ -10,20 +10,25 @@ import { t, locale, useLanguage } from '../client/i18n.js';
 import { HudLayoutController, clampScale, type HudLayout } from './layout.js';
 import { Icon } from './Icon.js';
 import { useRefreshSeconds } from '../client/refresh.js';
+import { resetTime } from './resetTime.js';
 
 type Today = { tokens:number; cacheHitRate:number; fetchedAt:string };
 type Source = { id:string; label:string; sessions:number };
 export function pace(window: QuotaWindow | undefined, now = Date.now()) {
   if (!window?.durationMins || !window.resetsAt) return undefined;
-  return Math.max(0, Math.min(100, 100 - (Date.parse(window.resetsAt) - now) / (window.durationMins * 600)));
+  const reset=Date.parse(window.resetsAt);
+  return Number.isFinite(reset) ? Math.max(0, Math.min(100, 100 - (reset - now) / (window.durationMins * 600))) : undefined;
 }
 const number = (value:number) => new Intl.NumberFormat('en', { notation:'compact', maximumFractionDigits:1 }).format(value);
 function Bar({ label, window, remaining }: { label:string; window?:QuotaWindow;remaining:boolean }) {
   const ideal = pace(window);
   const used=window ? Math.max(0,Math.min(100,window.usedPercent)) : undefined;
   const value=used===undefined ? undefined : remaining ? 100-used : used;
-  return <div className="quota-row" title={window?.resetsAt ? `${new Date(window.resetsAt).toLocaleString(locale())} ${t('Resets')}` : t('Quota window unavailable')}>
+  const reset=resetTime(window?.resetsAt,locale());
+  const resetLabel=reset ? t('Resets at {time}',{time:reset.full}) : t('Reset time unavailable');
+  return <div className="quota-row" title={window ? resetLabel : t('Quota window unavailable')}>
     <span>{label}</span><div className="track"><i style={{width:`${value ?? 0}%`}} />{ideal !== undefined && <em style={{left:`${remaining?100-ideal:ideal}%`}} />}</div><b>{value!==undefined ? `${Math.round(value)}%` : '—'}</b>
+    <span className="reset-time" title={resetLabel}><span className="reset-label">{t('Resets')} </span>{reset ? <time dateTime={reset.dateTime} aria-label={resetLabel}>{reset.compact}</time> : <span aria-label={resetLabel}>—</span>}</span>
   </div>;
 }
 function Hud() {

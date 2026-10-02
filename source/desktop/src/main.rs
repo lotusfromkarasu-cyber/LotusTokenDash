@@ -56,7 +56,7 @@ fn apply_layout(app: &tauri::AppHandle, mode: String, expanded: bool, scale: f64
     layout.mode = if mode == "strip" { "strip".into() } else { "hud".into() };
     layout.scale = scale.clamp(0.75, 1.5);
     let strip = layout.mode == "strip";
-    let (width, height) = if strip && !expanded { (260.0,20.0) } else if !expanded { (324.0,142.0) } else { (324.0,176.0) };
+    let (width, height) = if strip && !expanded { (324.0,20.0) } else if !expanded { (324.0,142.0) } else { (324.0,176.0) };
     let old_size = window.outer_size().map_err(|e|e.to_string())?;
     let mut position = window.outer_position().map_err(|e|e.to_string())?;
     let monitor = window.current_monitor().map_err(|e|e.to_string())?;

@@ -7,6 +7,7 @@ export const zh: Record<string,string> = {
   'Provider':'提供商', 'API Token':'API Token', 'Base URL (optional)':'Base URL（可选）',
   'Leave empty and save to remove credentials':'留空并保存可移除配置', 'Validate and save':'验证并保存',
   'Validating…':'正在验证…', 'Saved':'已保存', 'Validation failed':'验证失败', 'Resets':'重置',
+  'Resets at {time}':'重置时间：{time}', 'Reset time unavailable':'暂未提供重置时间',
   'Usage':'用量', 'Remaining':'余量', 'Show remaining quota':'显示剩余额度', 'Show used quota':'显示已用额度',
   'Today tokens':'今日 Token', 'Cache hit':'缓存命中率', 'Source':'统计来源', 'LIVE':'实时', 'Cached':'缓存',
   'Connecting':'连接中', 'Disconnected':'未连接', 'Open analysis':'打开完整分析窗口', 'Hide to tray':'隐藏到托盘',
