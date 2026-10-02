@@ -12,13 +12,13 @@ test('switching provider changes requests and never reuses the previous provider
     await route.fulfill({json:response});
   });
   await page.setViewportSize({width:1360,height:900});
-  await page.goto('/'); await expect(page.getByLabel('Codex 数据来源')).toBeVisible();
+  await page.goto('/'); await expect(page.getByLabel('Codex data source',{exact:true})).toBeVisible();
   await expect(page.getByText('Total tokens',{exact:true}).first()).toBeVisible();
   await page.screenshot({path:'../../build/details-preview.png'});
   const changed=page.waitForRequest(req=>req.url().includes('/api/daily')&&req.headers()['x-lotus-source']==='custom:proxy');
-  await page.getByLabel('Codex 数据来源').selectOption('custom:proxy'); await changed;
+  await page.getByLabel('Codex data source',{exact:true}).selectOption('custom:proxy'); await changed;
   const back=page.waitForRequest(req=>req.url().includes('/api/daily')&&req.headers()['x-lotus-source']==='openai');
-  await page.getByLabel('Codex 数据来源').selectOption('openai'); await back;
+  await page.getByLabel('Codex data source',{exact:true}).selectOption('openai'); await back;
 });
 test('HUD keeps both quota windows, source-specific today stats and hover strip expansion',async({page})=>{
   await page.route('**/api/lotus/**',async route=>{
@@ -30,10 +30,10 @@ test('HUD keeps both quota windows, source-specific today stats and hover strip 
   });
   await page.goto('/hud.html');await expect(page.locator('.daily')).toContainText('11K'); await expect(page.locator('.daily')).toContainText('60.0%');
   const fits=await page.locator('.hud').evaluate(node=>{const box=node.getBoundingClientRect();const daily=node.querySelector('.daily')!.getBoundingClientRect();return daily.bottom<=box.bottom;});expect(fits).toBe(true);
-  await page.locator('.hud').hover(); await expect(page.getByLabel('统计来源')).toBeVisible();
-  await page.getByLabel('统计来源').selectOption('custom:proxy'); await expect(page.locator('.daily')).toContainText('22K');await expect(page.locator('.daily')).toContainText('20.0%');
-  await page.getByTitle('吸附顶部细条').click(); await expect(page.locator('.hud')).toHaveClass(/thin/);
+  await page.locator('.hud').hover(); await expect(page.getByLabel('Source',{exact:true})).toBeVisible();
+  await page.getByLabel('Source',{exact:true}).selectOption('custom:proxy'); await expect(page.locator('.daily')).toContainText('22K');await expect(page.locator('.daily')).toContainText('20.0%');
+  await page.getByTitle('Dock to top bar').click(); await expect(page.locator('.hud')).toHaveClass(/thin/);
   await expect(page.locator('.quota-row')).toHaveCount(2);
-  await page.mouse.move(600,400);await page.locator('.hud').hover();await expect(page.getByLabel('统计来源')).toBeVisible();
+  await page.mouse.move(600,400);await page.locator('.hud').hover();await expect(page.getByLabel('Source',{exact:true})).toBeVisible();
   await page.screenshot({path:'../../build/hud-preview.png'});
 });

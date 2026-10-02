@@ -1,3 +1,4 @@
+import { t, locale } from '../i18n.js';
 import type { MetricMode } from '../../shared/types.js';
 
 interface CustomTooltipProps {
@@ -49,7 +50,7 @@ export function CustomTooltip({ active, payload, label, mode }: CustomTooltipPro
                   backgroundColor: entry.color,
                   marginRight: '6px'
                 }} />
-                {entry.name}:
+                {t(entry.name)}:
               </td>
               <td style={{
                 padding: '2px 0',

@@ -12,6 +12,7 @@ for(const path of ['/','/hud.html']) {
       return route.fulfill({json});
     });
     await page.addInitScript(()=>{
+      localStorage.setItem('lotus-language','zh');
       let attempts=0;
       const calls:string[]=[];
       Object.assign(window,{isTauri:true,__nativeCalls:calls,__TAURI_INTERNALS__:{
@@ -31,7 +32,7 @@ for(const path of ['/','/hud.html']) {
     await expect(page.getByRole('alert')).toContainText('本地数据服务连接失败');
     await expect(page.getByRole('alert')).toContainText('测试：服务未启动');
     await page.getByRole('button',{name:'重试',exact:true}).click();
-    if(path==='/')await expect(page.getByLabel('Codex 数据来源')).toBeVisible();
+    if(path==='/')await expect(page.getByLabel('Codex 数据来源',{exact:true})).toBeVisible();
     else await expect(page.locator('.daily')).toContainText('11K');
     const calls=await page.evaluate(()=>(window as unknown as {__nativeCalls:string[]}).__nativeCalls);
     expect(calls.filter(call=>call==='service_address')).toHaveLength(2);
@@ -50,8 +51,8 @@ test('quota failures show a disconnected state and refresh retries both data str
     else await route.fulfill({json:{status:{state:'ok'},freshness:'live',windows:[{durationMins:300,usedPercent:25},{durationMins:10080,usedPercent:40}]}});
   });
   await page.goto('/hud.html');
-  await expect(page.locator('.live')).toContainText('未连接');
-  await page.getByTitle('刷新统计').click();
+  await expect(page.locator('.live')).toContainText('Disconnected');
+  await page.getByTitle('Refresh usage').click();
   await expect(page.locator('.live')).toContainText('LIVE');
   await expect(page.locator('.quota-row').first()).toContainText('25%');
   await expect(page.locator('.quota-row').last()).toContainText('40%');

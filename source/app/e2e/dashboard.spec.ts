@@ -111,7 +111,7 @@ test.describe('Agent: OpenCode', () => {
     const heatmap = page.locator('text=24-Hour Activity Heatmap');
     await expect(heatmap).toBeVisible();
 
-    const coloredCells = page.locator('[style*="rgba(16, 185, 129"]');
+    const coloredCells = page.locator('[style*="rgba(111, 37, 42"]');
     const count = await coloredCells.count();
     expect(count).toBeGreaterThan(0);
   });
@@ -191,7 +191,7 @@ test.describe('Dashboard refresh', () => {
       return url.pathname === `/api/${path}` && url.searchParams.get('refresh') === '1';
     }));
 
-    await page.locator('button[title^="刷新数据"]').click();
+    await page.locator('button[title^="Refresh data"]').click();
     await Promise.all(refreshRequests);
   });
 
@@ -645,7 +645,7 @@ test.describe('Error handling', () => {
     // Heatmap should still render (with all cells gray/zero)
     await expect(page.locator('text=24-Hour Activity Heatmap')).toBeVisible();
     // All cells should have gray background (no activity)
-    const coloredCells = page.locator('[style*="rgba(16, 185, 129"]');
+    const coloredCells = page.locator('[style*="rgba(111, 37, 42"]');
     const count = await coloredCells.count();
     expect(count).toBe(0);
   });

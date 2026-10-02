@@ -1,3 +1,4 @@
+import { locale } from '../i18n.js';
 export function formatTokens(n: number): string {
   if (n >= 999_950_000) {
     return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
@@ -22,7 +23,7 @@ export function formatUSD(n: number): string {
 
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale(), {
     month: 'short',
     day: 'numeric',
   });

@@ -1,3 +1,4 @@
+import { t, locale } from '../i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchSettings, updateCodexDataPaths } from '../api/client.js';
 import type { AppSettingsResponse, CodexDataPathStatus } from '../../shared/types.js';
@@ -67,20 +68,20 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-950/30 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Codex data source settings">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-950/30 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={t("Codex data source settings")}>
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-[0_24px_80px_rgba(28,25,23,0.22)] border border-stone-200/70">
         <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-6 py-5">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-stone-900">Codex data sources</h2>
+            <h2 className="text-lg font-extrabold tracking-tight text-stone-900">{t("Codex data sources")}</h2>
             <p className="mt-1 text-[13px] font-medium leading-relaxed text-stone-500">
-              TokenDash scans official Codex data by default. Add one or more compatible custom homes for non-official clients.
+              {t("TokenDash scans official Codex data by default. Add one or more compatible custom homes for non-official clients.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
-            aria-label="Close settings"
+            aria-label={t("Close settings")}
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" /></svg>
           </button>
@@ -88,11 +89,11 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
 
         <div className="px-6 py-5">
           {loading ? (
-            <div className="flex h-48 items-center justify-center text-[13px] font-medium text-stone-400">Loading settings…</div>
+            <div className="flex h-48 items-center justify-center text-[13px] font-medium text-stone-400">{t("Loading settings…")}</div>
           ) : (
             <div className="space-y-5">
               <div>
-                <label className="text-[12px] font-bold uppercase tracking-wider text-stone-400">Custom paths</label>
+                <label className="text-[12px] font-bold uppercase tracking-wider text-stone-400">{t("Custom paths")}</label>
                 <textarea
                   value={draft}
                   onChange={e => { setDraft(e.target.value); setSaved(false); }}
@@ -101,23 +102,23 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
                   className="mt-2 h-32 w-full resize-none rounded-xl border border-stone-200 bg-stone-50/60 px-3 py-2.5 font-mono text-[12px] text-stone-800 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
                 />
                 <p className="mt-2 text-[12px] leading-relaxed text-stone-500">
-                  Multiple paths are supported: put one path per line. Each home should contain <span className="font-mono">sessions/</span> or <span className="font-mono">archived_sessions/</span>; direct transcript folders are also accepted.
+                  {t("Multiple paths are supported: put one path per line. Each home should contain")} <span className="font-mono">sessions/</span> {t("or")} <span className="font-mono">archived_sessions/</span>{t("; direct transcript folders are also accepted.")}
                 </p>
               </div>
 
               <div className="rounded-xl border border-stone-200/70 bg-stone-50/60 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[12px] font-bold uppercase tracking-wider text-stone-500">Resolved sources</span>
-                  <span className="text-[11px] font-semibold text-stone-400">{settings?.codex.resolvedDataPaths.length ?? 0} paths</span>
+                  <span className="text-[12px] font-bold uppercase tracking-wider text-stone-500">{t("Resolved sources")}</span>
+                  <span className="text-[11px] font-semibold text-stone-400">{settings?.codex.resolvedDataPaths.length ?? 0} {t("paths")}</span>
                 </div>
                 <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
                   {(settings?.codex.resolvedDataPaths ?? []).map(source => (
                     <div key={`${source.kind}:${source.path}`} className="rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-stone-200/60">
                       <div className="flex items-center gap-2">
                         <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${source.readable ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-500'}`}>
-                          {source.readable ? 'Readable' : 'Missing'}
+                          {source.readable ? t("Readable") : t("Missing")}
                         </span>
-                        <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600">{sourceLabel(source.kind)}</span>
+                        <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600">{t(sourceLabel(source.kind))}</span>
                       </div>
                       <div className="mt-1 truncate font-mono text-[11px] text-stone-700" title={source.path}>{source.path}</div>
                     </div>
@@ -126,24 +127,24 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
               </div>
 
               {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">{error}</div>}
-              {saved && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-[12px] font-medium text-emerald-700">Saved. Dashboard data is refreshing from the configured sources.</div>}
+              {saved && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-[12px] font-medium text-emerald-700">{t("Saved. Dashboard data is refreshing from the configured sources.")}</div>}
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-stone-100 px-6 py-4">
           <div className="text-[11px] font-medium text-stone-400">
-            {draftPaths.length === 0 ? 'No custom paths configured.' : `${draftPaths.length} custom path${draftPaths.length === 1 ? '' : 's'} in draft.`}
+            {draftPaths.length === 0 ? t("No custom paths configured.") : t('{count} custom paths in draft.',{count:draftPaths.length})}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-[12px] font-bold text-stone-500 hover:bg-stone-100">Cancel</button>
+            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-[12px] font-bold text-stone-500 hover:bg-stone-100">{t("Cancel")}</button>
             <button
               type="button"
               onClick={() => { void handleSave(); }}
               disabled={loading || saving}
               className="rounded-lg bg-stone-900 px-4 py-2 text-[12px] font-bold text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save paths'}
+              {saving ? t("Saving…") : t("Save paths")}
             </button>
           </div>
         </div>

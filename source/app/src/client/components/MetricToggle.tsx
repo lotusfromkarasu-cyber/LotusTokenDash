@@ -1,3 +1,4 @@
+import { t, locale } from '../i18n.js';
 import type { MetricMode } from '../../shared/types.js';
 
 interface MetricToggleProps {
@@ -33,7 +34,7 @@ export function MetricToggle({ mode, onToggle }: MetricToggleProps) {
           e.currentTarget.style.backgroundColor = mode === 'tokens' ? '#3b82f6' : '#f3f4f6';
         }}
       >
-        Tokens
+        {t("Tokens")}
       </button>
       <button
         onClick={onToggle}
@@ -55,7 +56,7 @@ export function MetricToggle({ mode, onToggle }: MetricToggleProps) {
           e.currentTarget.style.backgroundColor = mode === 'usd' ? '#3b82f6' : '#f3f4f6';
         }}
       >
-        Cost (USD)
+        {t("Cost (USD)")}
       </button>
     </div>
   );

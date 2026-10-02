@@ -8,6 +8,7 @@ body { font-family:"Segoe UI Variable","Segoe UI","PingFang SC",system-ui,sans-s
 .lotus-brand small { display:block; font-size:9px; letter-spacing:2px; color:#b7afa9; margin-top:3px; }
 .lotus-source { display:flex; align-items:center; gap:12px; font-size:12px; color:#c7bbb2; }
 .lotus-source select { padding:9px 12px; border:1px solid #ffffff26; border-radius:9px; background:#303038; color:var(--cream); max-width:240px; }
+.lotus-language {padding:9px 8px;border:1px solid #ffffff26;border-radius:9px;background:#303038;color:var(--cream);font-size:12px;font-family:inherit;cursor:pointer}
 .lotus-button { background:var(--wine); color:var(--cream); padding:9px 15px; border:1px solid #ffffff18; border-radius:9px; cursor:pointer; font-size:12px; }
 .lotus-button:hover { filter:brightness(1.15); }
 .lotus-scope-note { padding:12px 40px; font-size:11px; color:#756253; background:#ede8e2; }

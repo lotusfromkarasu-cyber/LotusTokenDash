@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use std::{io::{BufRead, BufReader}, process::{Child, Command, Stdio}, sync::{Arc, Mutex}, time::Duration};
+use std::{io::{BufRead, BufReader}, process::{Child, Command, Stdio}, sync::{Arc, Mutex, atomic::{AtomicU64, Ordering}}, time::Duration};
 use tauri::{Emitter, Manager, PhysicalPosition, LogicalSize, WebviewUrl, WebviewWindowBuilder};
 use tauri::menu::{Menu, MenuItem, CheckMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
@@ -10,6 +10,8 @@ mod diagnostics;
 struct Address { port: u16, token: String }
 #[derive(Clone, Serialize, Deserialize)]
 struct Layout { mode: String, scale: f64, x: i32, y: i32, #[serde(default="enabled")] topmost: bool }
+#[derive(Clone, Serialize)]
+struct LayoutSnapshot { #[serde(flatten)] layout:Layout, revision:u64 }
 fn enabled() -> bool { true }
 impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true } } }
 struct Service {
@@ -17,9 +19,13 @@ struct Service {
     child: Mutex<Option<Child>>,
     layout: Mutex<Layout>,
     details_gate: Arc<Mutex<()>>,
+    layout_gate: Arc<Mutex<()>>,
+    layout_revision: AtomicU64,
 }
 #[tauri::command]
-fn layout_state(state: tauri::State<'_, Service>) -> Layout { state.layout.lock().unwrap().clone() }
+fn layout_state(state: tauri::State<'_, Service>) -> LayoutSnapshot {
+    LayoutSnapshot {layout:state.layout.lock().unwrap().clone(),revision:state.layout_revision.load(Ordering::SeqCst)}
+}
 #[tauri::command]
 async fn service_address(state: tauri::State<'_, Service>) -> Result<Address, String> {
     for _ in 0..450 {
@@ -37,11 +43,12 @@ fn save_layout(app: &tauri::AppHandle) {
         };
     }
 }
-#[tauri::command]
-fn set_layout(app: tauri::AppHandle, mode: String, expanded: bool, scale: f64) -> Result<(), String> {
+fn apply_layout(app: &tauri::AppHandle, mode: String, expanded: bool, scale: f64, revision:u64) -> Result<LayoutSnapshot, String> {
     let window = app.get_webview_window("hud").ok_or("HUD unavailable")?;
     let state = app.state::<Service>();
-    let mut layout = state.layout.lock().map_err(|e| e.to_string())?;
+    // Window getters marshal to the UI thread. Never hold the shared state
+    // mutex while calling them: an IPC callback can read that state there.
+    let mut layout = state.layout.lock().map_err(|e|e.to_string())?.clone();
     let was_strip = layout.mode == "strip";
     layout.mode = if mode == "strip" { "strip".into() } else { "hud".into() };
     layout.scale = scale.clamp(0.75, 1.5);
@@ -58,12 +65,52 @@ fn set_layout(app: tauri::AppHandle, mode: String, expanded: bool, scale: f64) -
     }
     window.set_size(LogicalSize::new(width * layout.scale, height * layout.scale)).map_err(|e|e.to_string())?;
     window.set_position(position).map_err(|e|e.to_string())?;
-    layout.x = position.x; layout.y = position.y;
-    drop(layout); save_layout(&app);
-    Ok(())
+    {
+        let mut stored=state.layout.lock().map_err(|e|e.to_string())?;
+        stored.mode=layout.mode;stored.scale=layout.scale;stored.x=position.x;stored.y=position.y;
+    }
+    save_layout(app);
+    let snapshot=LayoutSnapshot {layout:state.layout.lock().map_err(|e|e.to_string())?.clone(),revision};
+    let _=app.emit("lotus-mode",&snapshot);
+    Ok(snapshot)
 }
 #[tauri::command]
-fn finish_drag(app: tauri::AppHandle) -> Result<(), String> {
+async fn set_layout(app: tauri::AppHandle, mode: String, expanded: bool, scale: f64) -> Result<LayoutSnapshot, String> {
+    let state=app.state::<Service>();
+    let revision=state.layout_revision.fetch_add(1,Ordering::SeqCst)+1;
+    let gate=state.layout_gate.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard=gate.lock().map_err(|e|e.to_string())?;
+        let state=app.state::<Service>();
+        if revision!=state.layout_revision.load(Ordering::SeqCst) {return Ok(layout_state(state));}
+        apply_layout(&app,mode,expanded,scale,revision)
+    }).await.map_err(|e|e.to_string())?
+}
+#[tauri::command]
+fn begin_drag(state:tauri::State<'_,Service>) -> u64 {state.layout_revision.fetch_add(1,Ordering::SeqCst)+1}
+#[cfg(windows)]
+fn left_button_down() -> bool {
+    #[link(name="user32")]
+    extern "system" {fn GetAsyncKeyState(key:i32)->i16;}
+    // WebView2 can swallow mouseup while the native move loop owns the mouse.
+    unsafe {(GetAsyncKeyState(0x01) as u16 & 0x8000)!=0}
+}
+#[cfg(not(windows))]
+fn left_button_down() -> bool {false}
+#[tauri::command]
+async fn finish_drag(app: tauri::AppHandle, revision:u64) -> Result<LayoutSnapshot, String> {
+    while left_button_down() {
+        if revision!=app.state::<Service>().layout_revision.load(Ordering::SeqCst) {return Ok(layout_state(app.state::<Service>()));}
+        tokio::time::sleep(Duration::from_millis(16)).await;
+    }
+    let gate=app.state::<Service>().layout_gate.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard=gate.lock().map_err(|e|e.to_string())?;
+        if revision!=app.state::<Service>().layout_revision.load(Ordering::SeqCst) {return Ok(layout_state(app.state::<Service>()));}
+        finish_drag_layout(&app,revision)
+    }).await.map_err(|e|e.to_string())?
+}
+fn finish_drag_layout(app:&tauri::AppHandle, revision:u64) -> Result<LayoutSnapshot,String> {
     let window = app.get_webview_window("hud").ok_or("HUD unavailable")?;
     let position = window.outer_position().map_err(|e|e.to_string())?;
     let monitor = window.current_monitor().map_err(|e|e.to_string())?;
@@ -72,7 +119,7 @@ fn finish_drag(app: tauri::AppHandle) -> Result<(), String> {
     let scale = state.layout.lock().map_err(|e|e.to_string())?.scale;
     let snap = monitor.as_ref().map(|monitor| position.y <= monitor.position().y + (28.0 * factor) as i32).unwrap_or(false);
     let mode = if snap { "strip" } else { "hud" };
-    set_layout(app.clone(), mode.into(), false, scale)?;
+    apply_layout(app, mode.into(), false, scale,revision)?;
     if let Some(monitor) = monitor {
         let size = window.outer_size().map_err(|e|e.to_string())?;
         let center = monitor.position().x + (monitor.size().width as i32 - size.width as i32)/2;
@@ -81,7 +128,7 @@ fn finish_drag(app: tauri::AppHandle) -> Result<(), String> {
     }
     let now = window.outer_position().map_err(|e|e.to_string())?;
     { let mut layout = state.layout.lock().map_err(|e|e.to_string())?; layout.x=now.x; layout.y=now.y; }
-    save_layout(&app); let _ = app.emit("lotus-mode", serde_json::json!({"mode":mode})); Ok(())
+    save_layout(app); Ok(layout_state(state))
 }
 #[tauri::command]
 async fn open_details(app: tauri::AppHandle) -> Result<(), String> {
@@ -111,13 +158,19 @@ async fn open_details(app: tauri::AppHandle) -> Result<(), String> {
 }
 #[tauri::command]
 fn hide_hud(app: tauri::AppHandle) { if let Some(window) = app.get_webview_window("hud") { let _ = window.hide(); } }
+#[tauri::command]
+fn set_language(app:tauri::AppHandle,language:String) {
+    if let Some(window)=app.get_webview_window("details") {
+        let _=window.set_title(if language=="zh" {"LotusTokenDash · 使用分析"} else {"LotusTokenDash · Usage analytics"});
+    }
+}
 fn show_hud(app: &tauri::AppHandle) { if let Some(window) = app.get_webview_window("hud") { let _ = window.show(); let _ = window.set_focus(); } }
 fn main() {
     let address = Arc::new(Mutex::new(None));
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app,_,_| show_hud(app)))
-        .manage(Service { address:address.clone(), child:Mutex::new(None), layout:Mutex::new(Layout::default()), details_gate:Arc::new(Mutex::new(())) })
-        .invoke_handler(tauri::generate_handler![service_address,layout_state,set_layout,finish_drag,open_details,hide_hud,diagnostics::renderer_status])
+        .manage(Service { address:address.clone(), child:Mutex::new(None), layout:Mutex::new(Layout::default()), details_gate:Arc::new(Mutex::new(())),layout_gate:Arc::new(Mutex::new(())),layout_revision:AtomicU64::new(0) })
+        .invoke_handler(tauri::generate_handler![service_address,layout_state,set_layout,begin_drag,finish_drag,open_details,hide_hud,set_language,diagnostics::renderer_status])
         .on_window_event(|window,event| {
             if window.label()=="details" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -182,8 +235,8 @@ fn main() {
                         if let Err(error)=open_details(app.clone()).await { diagnostics::log(&app,&format!("details failed: {error}")); }
                     }); },
                     "strip" | "hud" => {
-                        let mode=event.id.as_ref(); let scale=app.state::<Service>().layout.lock().unwrap().scale;
-                        let _ = set_layout(app.clone(),mode.into(),false,scale); let _ = app.emit("lotus-mode",serde_json::json!({"mode":mode})); show_hud(app);
+                        let mode=event.id.as_ref().to_string(); let scale=app.state::<Service>().layout.lock().unwrap().scale;
+                        let handle=app.clone(); tauri::async_runtime::spawn(async move {let _=set_layout(handle,mode,false,scale).await;});show_hud(app);
                     },
                     "quit" => app.exit(0), _=>{}
                 })
@@ -194,7 +247,8 @@ fn main() {
                     if let Some(window)=app.get_webview_window("hud") { let _ = window.set_position(PhysicalPosition::new(layout.x,layout.y)); let _=window.set_always_on_top(layout.topmost); }
                     let _=topmost.set_checked(layout.topmost);
                     *app.state::<Service>().layout.lock().unwrap()=layout;
-                    let _=set_layout(handle.clone(),mode.clone(),false,scale);
+                    let revision=app.state::<Service>().layout_revision.fetch_add(1,Ordering::SeqCst)+1;
+                    let _=apply_layout(&handle,mode,false,scale,revision);
                 }
             }
             if diagnostics::enabled() { diagnostics::run(handle); }

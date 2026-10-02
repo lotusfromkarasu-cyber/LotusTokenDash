@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
+import { setLanguage, getLanguage } from './i18n.js';
 
 let source = localStorage.getItem('lotus-source') || 'openai';
 export function getSource() { return source; }
@@ -7,11 +8,16 @@ export function setSource(id: string) { source = id; localStorage.setItem('lotus
 let initialization: Promise<void> | undefined;
 let sourceListening = false;
 let refreshListening = false;
+let languageListening = false;
 const originalFetch = window.fetch.bind(window);
 export function initializeDesktop(): Promise<void> {
   return initialization ??= connectDesktop().catch(error => { initialization=undefined; throw error; });
 }
 async function connectDesktop() {
+  if(isTauri() && !languageListening) {
+    await listen<'en'|'zh'>('lotus-language',event=>setLanguage(event.payload));
+    languageListening=true;
+  }
   if(isTauri() && !sourceListening) {
     await listen<string>('lotus-source',event=>{
     if(source===event.payload) return;
@@ -34,6 +40,7 @@ async function connectDesktop() {
     if (endpoint) headers.set('X-Lotus-Token', endpoint.token);
     return originalFetch(endpoint ? `http://127.0.0.1:${endpoint.port}${input}` : input, { ...init, headers });
   };
+  setLanguage(getLanguage());
 }
 export function reportDesktop(stage: 'ready' | 'data' | 'failed') {
   if(isTauri()) void invoke('renderer_status',{stage}).catch(()=>{});

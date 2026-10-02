@@ -1,3 +1,4 @@
+import { t, locale } from '../i18n.js';
 import { useMemo } from 'react';
 import {
   AreaChart, Area, LineChart, Line,
@@ -13,8 +14,8 @@ function Panel({ title, subtitle, children, className = '' }: { title: string; s
   return (
     <div className={`bg-white rounded-2xl p-5 shadow-[0_1px_3px_rgba(120,113,108,0.06)] ${className}`}>
       <div className="mb-4">
-        <h3 className="text-base font-bold text-stone-800">{title}</h3>
-        {subtitle && <p className="text-[12px] text-stone-400 mt-0.5">{subtitle}</p>}
+        <h3 className="text-base font-bold text-stone-800">{t(title)}</h3>
+        {subtitle && <p className="text-[12px] text-stone-400 mt-0.5">{t(subtitle)}</p>}
       </div>
       {children}
     </div>
@@ -24,16 +25,16 @@ function Panel({ title, subtitle, children, className = '' }: { title: string; s
 function KPICard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
     <div className={`flex flex-col justify-between rounded-2xl p-5 shadow-[0_1px_3px_rgba(120,113,108,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(120,113,108,0.09)] ${accent ? 'bg-indigo-50/50' : 'bg-white'}`}>
-      <p className="text-[12px] font-medium text-stone-400 mb-2">{label}</p>
+      <p className="text-[12px] font-medium text-stone-400 mb-2">{t(label)}</p>
       <p className={`text-2xl font-extrabold tracking-tight ${accent ? 'text-indigo-600' : 'text-stone-900'}`}>{value}</p>
-      {sub && <p className="text-[11px] text-stone-400 mt-1">{sub}</p>}
+      {sub && <p className="text-[11px] text-stone-400 mt-1">{t(sub)}</p>}
     </div>
   );
 }
 
 function formatDate(date: string): string {
   const d = new Date(date + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
 }
 
 function formatNumber(n: number): string {
@@ -115,7 +116,7 @@ export function AnalyticsSection({ analytics, timeRange }: AnalyticsSectionProps
     <>
       {/* Code Change Trend + Tool Call Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Panel title="Code Change Trend" subtitle="Lines added, deleted, and net change">
+        <Panel title={t("Code Change Trend")} subtitle={t("Lines added, deleted, and net change")}>
           {filteredChanges.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={filteredChanges}>
@@ -137,18 +138,18 @@ export function AnalyticsSection({ analytics, timeRange }: AnalyticsSectionProps
                     );
                   }}
                 />
-                <Area type="monotone" dataKey="linesAdded" name="Added" stroke={C[1]} fill={C[1]} fillOpacity={0.15} strokeWidth={2} />
-                <Area type="monotone" dataKey="linesDeleted" name="Deleted" stroke={C[3]} fill={C[3]} fillOpacity={0.08} strokeWidth={2} />
-                <Area type="monotone" dataKey="netChange" name="Net" stroke={C[0]} fill={C[0]} fillOpacity={0.05} strokeWidth={2} strokeDasharray="4 2" />
+                <Area type="monotone" dataKey="linesAdded" name={t("Added")} stroke={C[1]} fill={C[1]} fillOpacity={0.15} strokeWidth={2} />
+                <Area type="monotone" dataKey="linesDeleted" name={t("Deleted")} stroke={C[3]} fill={C[3]} fillOpacity={0.08} strokeWidth={2} />
+                <Area type="monotone" dataKey="netChange" name={t("Net")} stroke={C[0]} fill={C[0]} fillOpacity={0.05} strokeWidth={2} strokeDasharray="4 2" />
                 <Legend iconType="line" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-stone-400 text-[13px] py-8 text-center">No code change data available</p>
+            <p className="text-stone-400 text-[13px] py-8 text-center">{t("No code change data available")}</p>
           )}
         </Panel>
 
-        <Panel title="Tool Call Trend" subtitle="Daily usage frequency by tool">
+        <Panel title={t("Tool Call Trend")} subtitle={t("Daily usage frequency by tool")}>
           {filteredToolTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={filteredToolTrend}>
@@ -177,7 +178,7 @@ export function AnalyticsSection({ analytics, timeRange }: AnalyticsSectionProps
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-stone-400 text-[13px] py-8 text-center">No tool call trend data available</p>
+            <p className="text-stone-400 text-[13px] py-8 text-center">{t("No tool call trend data available")}</p>
           )}
         </Panel>
       </div>

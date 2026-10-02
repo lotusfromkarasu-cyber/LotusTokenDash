@@ -1,3 +1,4 @@
+import { t, locale } from '../i18n.js';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import {
@@ -51,12 +52,12 @@ function InsightCard({ label, title, detail, badge }: { label: string; title: st
   return (
     <div className="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(120,113,108,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(120,113,108,0.09)]">
       <div className="mb-3 flex items-start justify-between gap-3">
-        <p className="text-[12px] font-medium text-stone-400">{label}</p>
-        {badge ? <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-indigo-600">{badge}</span> : null}
+        <p className="text-[12px] font-medium text-stone-400">{t(label)}</p>
+        {badge ? <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-indigo-600">{t(badge)}</span> : null}
       </div>
       <div>
-        <p className="text-2xl font-extrabold tracking-tight text-stone-900">{title}</p>
-        <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-stone-500">{detail}</p>
+        <p className="text-2xl font-extrabold tracking-tight text-stone-900">{t(title)}</p>
+        <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-stone-500">{t(detail)}</p>
       </div>
     </div>
   );
@@ -65,10 +66,10 @@ function InsightCard({ label, title, detail, badge }: { label: string; title: st
 function KPICard({ label, value, sub, insight, accent }: { label: string; value: string; sub?: string; insight?: string; accent?: boolean }) {
   return (
     <div className="flex flex-col gap-1 p-5 rounded-2xl bg-white shadow-[0_1px_3px_rgba(120,113,108,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(120,113,108,0.09)]">
-      <span className="text-[12px] font-medium text-stone-400">{label}</span>
+      <span className="text-[12px] font-medium text-stone-400">{t(label)}</span>
       <span className={`text-3xl font-extrabold tracking-tighter font-mono mt-1 ${accent ? 'text-indigo-600' : 'text-stone-900'}`}>{value}</span>
-      {sub && <span className="text-xs font-medium text-stone-400 mt-0.5">{sub}</span>}
-      {insight && <div className="mt-2.5 pt-2.5 border-t border-stone-100 text-[12px] font-medium text-stone-500 leading-relaxed">{insight}</div>}
+      {sub && <span className="text-xs font-medium text-stone-400 mt-0.5">{t(sub)}</span>}
+      {insight && <div className="mt-2.5 pt-2.5 border-t border-stone-100 text-[12px] font-medium text-stone-500 leading-relaxed">{t(insight)}</div>}
     </div>
   );
 }
@@ -77,8 +78,8 @@ function Panel({ title, subtitle, children, className = '' }: { title: string; s
   return (
     <div className={`flex flex-col rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(120,113,108,0.06)] ${className}`}>
       <div className="mb-5">
-        <h3 className="text-[15px] font-semibold text-stone-900 tracking-tight">{title}</h3>
-        {subtitle && <p className="text-[13px] font-medium text-stone-400 mt-1">{subtitle}</p>}
+        <h3 className="text-[15px] font-semibold text-stone-900 tracking-tight">{t(title)}</h3>
+        {subtitle && <p className="text-[13px] font-medium text-stone-400 mt-1">{t(subtitle)}</p>}
       </div>
       <div className="flex-1 min-h-0">
         {children}
@@ -91,10 +92,10 @@ function TooltipBox({ active, payload, label, fmt = formatTokens }: { active?: b
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white rounded-xl px-3.5 py-3 shadow-[0_8px_30px_rgba(120,113,108,0.12)] text-[11px] border border-stone-200/40">
-      {label && <div className="text-stone-400 mb-1.5 font-medium">{label}</div>}
+      {label && <div className="text-stone-400 mb-1.5 font-medium">{t(label)}</div>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-5">
-          <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />{p.name}</span>
+          <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />{t(p.name)}</span>
           <span className="font-mono text-stone-700">{fmt(p.value)}</span>
         </div>
       ))}
@@ -108,7 +109,7 @@ function FilterTab({ options, value, onChange }: { options: readonly { key: stri
       {options.map(o => (
         <button key={o.key} onClick={() => onChange(o.key)}
           className={`px-3 py-1.5 rounded-md text-[11px] font-semibold tracking-wide transition-all duration-200 ${value === o.key ? 'bg-stone-800 text-white shadow-sm' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'}`}>
-          {o.label}
+          {t(o.label)}
         </button>
       ))}
     </div>
@@ -117,9 +118,9 @@ function FilterTab({ options, value, onChange }: { options: readonly { key: stri
 
 function ProjectSelect({ projects, value, onChange }: { projects: string[]; value: string; onChange: (v: string) => void }) {
   return (
-    <select aria-label="Project" value={value} onChange={e => onChange(e.target.value)}
+    <select aria-label={t("Project")} value={value} onChange={e => onChange(e.target.value)}
       className="bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-stone-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 max-w-[220px]">
-      <option value="">All Projects</option>
+      <option value="">{t("All Projects")}</option>
       {projects.map(p => <option key={p} value={p}>{formatProjectName(p, projects)}</option>)}
     </select>
   );
@@ -264,7 +265,7 @@ export function Dashboard() {
 
   // 格式化上次更新时间（HH:mm:ss）
   const lastUpdatedStr = dailyData.lastUpdated
-    ? dailyData.lastUpdated.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    ? dailyData.lastUpdated.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : null;
   const [metric, setMetric] = useLocalStorageState<MetricMode>('dashboard_metric', 'tokens');
 
@@ -567,7 +568,7 @@ export function Dashboard() {
           <i className={`h-1.5 w-1.5 rounded-full ${agent === 'codex' ? 'bg-sky-500' : agent === 'openclaw' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
           {current.label}<span className="ml-0.5 text-stone-400">⌄</span>
         </button>
-        {agentMenuOpen && <div role="menu" aria-label="Available agents" className="absolute right-0 top-[calc(100%+8px)] z-40 w-[196px] rounded-[10px] border border-stone-200/90 bg-white p-1.5 shadow-[0_12px_28px_rgba(41,37,36,.14)]">
+        {agentMenuOpen && <div role="menu" aria-label={t("Available agents")} className="absolute right-0 top-[calc(100%+8px)] z-40 w-[196px] rounded-[10px] border border-stone-200/90 bg-white p-1.5 shadow-[0_12px_28px_rgba(41,37,36,.14)]">
         {availableAgents.map((a) => {
           const cfg = AGENT_CONFIG[a]!;
           const isActive = agent === a;
@@ -588,7 +589,7 @@ export function Dashboard() {
               className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12px] font-semibold transition-colors ${isActive ? 'bg-indigo-50 text-indigo-600' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'}`}
             >
               <i className={`h-1.5 w-1.5 rounded-full ${a === 'codex' ? 'bg-sky-500' : a === 'openclaw' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
-              {cfg.label}{isActive && <span className="ml-auto font-mono text-[10px] text-stone-400">active</span>}
+              {cfg.label}{isActive && <span className="ml-auto font-mono text-[10px] text-stone-400">{t("active")}</span>}
             </button>
           );
         })}
@@ -601,9 +602,9 @@ export function Dashboard() {
     <button
       type="button"
       onClick={() => setShowDataSourceSettings(true)}
-      title="Configure Codex data sources"
+      title={t("Configure Codex data sources")}
       className="flex items-center justify-center w-8 h-8 rounded-lg text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-      aria-label="Configure Codex data sources"
+      aria-label={t("Configure Codex data sources")}
     >
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 16v-2m8-6h-2M6 12H4m12.95 4.95-1.414-1.414M8.464 8.464 7.05 7.05m9.9 0-1.414 1.414M8.464 15.536 7.05 16.95M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /></svg>
     </button>
@@ -623,13 +624,13 @@ export function Dashboard() {
         {renderSettingsModal()}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">使用分析</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleRefreshAll}
               disabled={dailyData.loading}
-              title="刷新数据"
+              title={t("刷新数据")}
               className="flex items-center justify-center w-8 h-8 rounded-lg text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-40"
             >
               <svg className={`w-4 h-4 ${dailyData.loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -653,13 +654,13 @@ export function Dashboard() {
       {renderSettingsModal()}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">使用分析</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleRefreshAll}
             disabled={dailyData.loading}
-            title="刷新数据"
+            title={t("刷新数据")}
             className="flex items-center justify-center w-8 h-8 rounded-lg text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-40"
           >
             <svg className={`w-4 h-4 ${dailyData.loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -677,27 +678,27 @@ export function Dashboard() {
   if (!dailyData.data) return null;
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-10">
+    <div data-lotus-analysis-ready className="max-w-[1440px] mx-auto px-6 py-10">
       {renderSettingsModal()}
       {/* Narrative Header & Filter Bar */}
       <div className="mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">使用分析</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
             <p className="text-[14px] font-medium text-stone-500 leading-relaxed">
-              Monitor token consumption, costs, and cache efficiency for your AI coding assistants.
+              {t("Monitor token consumption, costs, and cache efficiency for your AI coding assistants.")}
             </p>
           </div>
           <div className="flex items-center gap-3">
             {/* 自动刷新状态 + 手动刷新按钮 */}
             <div className="flex items-center gap-2">
               {lastUpdatedStr && (
-                <span className="text-[11px] font-medium text-stone-400">更新于 {lastUpdatedStr}</span>
+                <span className="text-[11px] font-medium text-stone-400">{t("更新于")} {lastUpdatedStr}</span>
               )}
               <button
                 onClick={handleRefreshAll}
                 disabled={dailyData.loading}
-                title="刷新数据（每 60 秒自动刷新）"
+                title={t("刷新数据（每 60 秒自动刷新）")}
                 className="flex items-center justify-center w-8 h-8 rounded-lg text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg className={`w-4 h-4 ${dailyData.loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -713,7 +714,7 @@ export function Dashboard() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-6 p-4 bg-white rounded-2xl border border-stone-200/50 shadow-sm w-fit">
             <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Time range</span>
+              <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">{t("Time range")}</span>
               <FilterTab options={TIME_RANGES} value={timeRange} onChange={v => setTimeRange(v as TimeRangeKey)} />
             </div>
 
@@ -721,7 +722,7 @@ export function Dashboard() {
               <>
                 <div className="w-px h-10 bg-stone-200/60 hidden sm:block"></div>
                 <div className="flex flex-col gap-2">
-                  <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Project</span>
+                  <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">{t("Project")}</span>
                   <ProjectSelect projects={projectList} value={project} onChange={setProject} />
                 </div>
               </>
@@ -729,7 +730,7 @@ export function Dashboard() {
 
             <div className="w-px h-10 bg-stone-200/60 hidden sm:block"></div>
             <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Metric</span>
+              <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">{t("Metric")}</span>
               <div className="flex items-center gap-1.5">
                 <FilterTab options={[{ key: 'tokens', label: 'Tokens' }, { key: 'usd', label: 'Cost' }, { key: 'sessions', label: 'Sessions' }]} value={metric} onChange={v => setMetric(v as MetricMode)} />
                 {!isTokens && modelAgg.length > 0 && (
@@ -744,12 +745,12 @@ export function Dashboard() {
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-[320px] bg-white rounded-xl shadow-[0_8px_30px_rgba(120,113,108,0.15)] border border-stone-200/60 p-4">
                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-stone-200/60 rotate-45" />
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Pricing Formula</span>
+                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">{t("Pricing Formula")}</span>
                         </div>
                         <div className="text-[10px] font-mono text-stone-400 bg-stone-50 rounded-lg px-2.5 py-1.5 mb-2.5 leading-relaxed">
-                          Cost = (input - cached) x in_price + cached x cache_price + output x out_price
+                          {t("Cost = (input - cached) x in_price + cached x cache_price + output x out_price")}
                         </div>
-                        <div className="text-[10px] text-stone-400 mb-1.5 font-semibold">Per 1M tokens (USD)</div>
+                        <div className="text-[10px] text-stone-400 mb-1.5 font-semibold">{t("Per 1M tokens (USD)")}</div>
                         <div className="space-y-1">
                           {modelAgg.slice(0, 4).map((m, i) => {
                             const pricing = MODEL_PRICING_DISPLAY[m.name] || MODEL_PRICING_DISPLAY.default;
@@ -757,9 +758,9 @@ export function Dashboard() {
                               <div key={m.name} className="flex items-center gap-1.5 text-[10px]">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: C[i % C.length] }} />
                                 <span className="font-semibold text-stone-600 w-20 truncate">{m.name}</span>
-                                <span className="text-stone-400 font-mono">in ${pricing.input}</span>
-                                <span className="text-emerald-500 font-mono">ca ${pricing.cache}</span>
-                                <span className="text-stone-400 font-mono">out ${pricing.output}</span>
+                                <span className="text-stone-400 font-mono">{t("in $")}{pricing.input}</span>
+                                <span className="text-emerald-500 font-mono">{t("ca $")}{pricing.cache}</span>
+                                <span className="text-stone-400 font-mono">{t("out $")}{pricing.output}</span>
                               </div>
                             );
                           })}
@@ -780,25 +781,25 @@ export function Dashboard() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <KPICard
-          label={isTokens ? 'Total tokens' : 'Total cost'}
+          label={isTokens ? t("Total tokens") : t("Total cost")}
           value={isTokens ? formatTokens(totals.totalTokens) : formatUSD(totals.totalCost)}
           accent
-          insight={isTokens ? 'The primary volume indicator for the selected period.' : 'Estimated spend for the selected period.'}
+          insight={isTokens ? t("The primary volume indicator for the selected period.") : t("Estimated spend for the selected period.")}
         />
         <KPICard
-          label={isTokens ? 'Daily avg' : 'Daily avg cost'}
+          label={isTokens ? t("Daily avg") : t("Daily avg cost")}
           value={isTokens ? formatTokens(activeDays > 0 ? totals.totalTokens / activeDays : 0) : formatUSD(activeDays > 0 ? totals.totalCost / activeDays : 0)}
-          sub={`${activeDays} active days`}
-          insight={isTokens ? 'Baseline for typical daily volume.' : 'Baseline for typical daily spend.'}
+          sub={t('{count} active days',{count:activeDays})}
+          insight={isTokens ? t("Baseline for typical daily volume.") : t("Baseline for typical daily spend.")}
         />
-        <KPICard label="Avg daily changes" value={avgDailyChanges !== null ? avgDailyChanges.toLocaleString() + ' lines' : '-'} insight="Average lines changed per active day." />
-        <KPICard label="Cache hit" value={formatPercent(cacheHitRate)} insight="Higher hit rate reduces cost." />
-        <KPICard label="Output/Input" value={formatPercent(outputRatio)} insight="Ratio of generation to context." />
+        <KPICard label={t("Avg daily changes")} value={avgDailyChanges !== null ? avgDailyChanges.toLocaleString() + ' '+t('lines') : '-'} insight={t("Average lines changed per active day.")} />
+        <KPICard label={t("Cache hit")} value={formatPercent(cacheHitRate)} insight={t("Higher hit rate reduces cost.")} />
+        <KPICard label={t("Output/Input")} value={formatPercent(outputRatio)} insight={t("Ratio of generation to context.")} />
       </div>
 
       {/* Model Trend (bar) + Cache Efficiency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Panel title="Model trend" subtitle={isToday ? "Hourly breakdown from today's session blocks" : "Showing top 6 models to maintain readability"}>
+        <Panel title={t("Model trend")} subtitle={isToday ? t("Hourly breakdown from today's session blocks") : t("Showing top 6 models to maintain readability")}>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={isToday ? hourlyModelTrendData : modelTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
@@ -813,20 +814,20 @@ export function Dashboard() {
           </ResponsiveContainer>
         </Panel>
 
-        <Panel title="Cache efficiency & savings">
+        <Panel title={t("Cache efficiency & savings")}>
           <div className="flex items-center gap-6 mb-4 px-4 py-3 bg-emerald-50/50 rounded-xl border border-emerald-100/50">
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">Est. Cost Saved</span>
+              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">{t("Est. Cost Saved")}</span>
               <span className="text-2xl font-black text-emerald-600 tracking-tight">{formatUSD(cacheSavings.costSaved)}</span>
             </div>
             <div className="w-px h-8 bg-emerald-200/50"></div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">Tokens Saved</span>
+              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">{t("Tokens Saved")}</span>
               <span className="text-lg font-extrabold text-emerald-700/80 tracking-tight font-mono">{formatTokens(cacheSavings.tokensSaved)}</span>
             </div>
             <div className="w-px h-8 bg-emerald-200/50"></div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">Avg Hit Rate</span>
+              <span className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">{t("Avg Hit Rate")}</span>
               <span className="text-lg font-extrabold text-emerald-700/80 tracking-tight font-mono">{formatPercent(cacheSavings.hitRate)}</span>
             </div>
           </div>
@@ -838,8 +839,8 @@ export function Dashboard() {
               <YAxis yAxisId="right" orientation="right" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v.toFixed(0)}%`} />
               <Tooltip content={<TooltipBox />} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-              <Area yAxisId="left" type="monotone" dataKey="cacheRead" stroke={C[5]} fill={C[5]} fillOpacity={0.08} name="Cache Read" strokeWidth={1.5} />
-              <Line yAxisId="right" type="monotone" dataKey="hitRate" stroke={C[3]} strokeWidth={2} dot={false} name="Hit Rate (%)" />
+              <Area yAxisId="left" type="monotone" dataKey="cacheRead" stroke={C[5]} fill={C[5]} fillOpacity={0.08} name={t("Cache Read")} strokeWidth={1.5} />
+              <Line yAxisId="right" type="monotone" dataKey="hitRate" stroke={C[3]} strokeWidth={2} dot={false} name={t("Hit Rate (%)")} />
             </ComposedChart>
           </ResponsiveContainer>
         </Panel>
@@ -849,15 +850,15 @@ export function Dashboard() {
       {(projectsData.error || blocksData.error) && (
         <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200/60 px-4 py-2.5 flex items-center gap-2 text-[12px] text-amber-700 font-medium">
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          {projectsData.error && <span>Projects data unavailable</span>}
+          {projectsData.error && <span>{t("Projects data unavailable")}</span>}
           {projectsData.error && blocksData.error && <span className="text-amber-400">·</span>}
-          {blocksData.error && <span>Session data unavailable</span>}
+          {blocksData.error && <span>{t("Session data unavailable")}</span>}
         </div>
       )}
 
       {/* Model Distribution + Project Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Panel title="Model distribution" subtitle="Ranked by total volume">
+        <Panel title={t("Model distribution")} subtitle={t("Ranked by total volume")}>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
               <Pie
@@ -882,14 +883,14 @@ export function Dashboard() {
 
         {!project ? (
           projectsData.loading && !projectsData.data ? (
-            <Panel title="Project distribution">
+            <Panel title={t("Project distribution")}>
               <div className="flex items-center justify-center h-64 text-stone-400 text-[13px]">
                 <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                Loading project data...
+                {t("Loading project data...")}
               </div>
             </Panel>
           ) : (
-            <Panel title="Project distribution" subtitle={`Top 8 projects by ${isTokens ? 'tokens' : 'cost'}`}>
+            <Panel title={t("Project distribution")} subtitle={`Top 8 projects by ${isTokens ? t("tokens") : t("cost")}`}>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={projectPieData.slice(0, 8)} layout="vertical" margin={{ left: 8, right: 8, top: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" horizontal={false} />
@@ -906,7 +907,7 @@ export function Dashboard() {
             </Panel>
           )
         ) : project ? (
-          <Panel title="Output / Input ratio" subtitle="Daily generation vs context ratio">
+          <Panel title={t("Output / Input ratio")} subtitle={t("Daily generation vs context ratio")}>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={outputInputTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
@@ -915,9 +916,9 @@ export function Dashboard() {
                 <YAxis yAxisId="ratio" orientation="right" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v.toFixed(0)}%`} />
                 <Tooltip content={<TooltipBox />} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
-                <Line yAxisId="tokens" type="monotone" dataKey="output" stroke={C[1]} strokeWidth={2} dot={false} name="Output" />
-                <Line yAxisId="tokens" type="monotone" dataKey="input" stroke={C[0]} strokeWidth={2} dot={false} name="Input" />
-                <Line yAxisId="ratio" type="monotone" dataKey="ratio" stroke={C[3]} strokeWidth={2} strokeDasharray="4 2" dot={false} name="Ratio (%)" />
+                <Line yAxisId="tokens" type="monotone" dataKey="output" stroke={C[1]} strokeWidth={2} dot={false} name={t("Output")} />
+                <Line yAxisId="tokens" type="monotone" dataKey="input" stroke={C[0]} strokeWidth={2} dot={false} name={t("Input")} />
+                <Line yAxisId="ratio" type="monotone" dataKey="ratio" stroke={C[3]} strokeWidth={2} strokeDasharray="4 2" dot={false} name={t("Ratio (%)")} />
               </LineChart>
             </ResponsiveContainer>
           </Panel>
@@ -926,19 +927,19 @@ export function Dashboard() {
 
       {/* 24-Hour Activity Heatmap */}
       <div className="mb-4">
-        <Panel title="24-Hour Activity Heatmap" subtitle={isToday ? "Today's hourly activity distribution" : "Activity distribution by hour and day of week"}>
+        <Panel title={t("24-Hour Activity Heatmap")} subtitle={isToday ? t("Today's hourly activity distribution") : t("Activity distribution by hour and day of week")}>
           {blocksData.loading && !blocksData.data ? (
             <div className="flex items-center justify-center h-48 text-stone-400 text-[13px]">
               <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-              Loading session data...
+              {t("Loading session data...")}
             </div>
           ) : heatmapData ? (
             <div className="flex flex-col w-full pt-1 pb-2">
               <div className="flex w-full gap-2">
                 <div className="w-8 shrink-0 flex flex-col justify-around text-[10px] font-medium text-stone-400 pt-0.5 pb-0.5">
                   {isToday
-                    ? <div className="h-[44px] flex items-center justify-center rounded bg-stone-800 text-white font-bold text-[9px]">Today</div>
-                    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => <div key={d} className={`h-[22px] flex items-center justify-center rounded ${i === new Date().getDay() ? 'bg-stone-800 text-white font-bold' : ''}`}>{d}</div>)
+                    ? <div className="h-[44px] flex items-center justify-center rounded bg-stone-800 text-white font-bold text-[9px]">{t("Today")}</div>
+                    : [t("Sun"), t("Mon"), t("Tue"), t("Wed"), t("Thu"), t("Fri"), t("Sat")].map((d, i) => <div key={d} className={`h-[22px] flex items-center justify-center rounded ${i === new Date().getDay() ? 'bg-stone-800 text-white font-bold' : ''}`}>{t(d)}</div>)
                   }
                 </div>
                 <div className="flex-1 flex flex-col gap-1">
@@ -971,7 +972,7 @@ export function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-stone-400 text-sm">No session data available</div>
+            <div className="h-48 flex items-center justify-center text-stone-400 text-sm">{t("No session data available")}</div>
           )}
         </Panel>
       </div>
@@ -982,18 +983,18 @@ export function Dashboard() {
       )}
 
       {/* Daily Detail Table */}
-      <Panel title="Daily detail" subtitle="Recent 30 days of usage breakdown">
+      <Panel title={t("Daily detail")} subtitle={t("Recent 30 days of usage breakdown")}>
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] whitespace-nowrap">
             <thead>
               <tr className="border-b border-stone-200">
-                <th className="text-left py-3 px-4 text-stone-400 font-semibold text-[10px]">Date</th>
-                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">Input</th>
-                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">Output</th>
-                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">Cache read</th>
-                <th className="text-right py-3 px-4 text-stone-600 font-semibold text-[10px]">Total tokens</th>
-                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">Cost</th>
-                <th className="text-left py-3 px-4 text-stone-400 font-semibold text-[10px]">Models</th>
+                <th className="text-left py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Date")}</th>
+                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Input")}</th>
+                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Output")}</th>
+                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Cache read")}</th>
+                <th className="text-right py-3 px-4 text-stone-600 font-semibold text-[10px]">{t("Total tokens")}</th>
+                <th className="text-right py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Cost")}</th>
+                <th className="text-left py-3 px-4 text-stone-400 font-semibold text-[10px]">{t("Models")}</th>
               </tr>
             </thead>
             <tbody>

@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeDesktop, reportDesktop } from './desktop.js';
 import './bootstrap.css';
+import { t, useLanguage } from './i18n.js';
 
 function Startup({ children }: { children: ReactNode }) {
+  useLanguage();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [attempt, retry] = useState(0);
@@ -18,8 +20,8 @@ function Startup({ children }: { children: ReactNode }) {
   useEffect(()=>{if(ready)reportDesktop('ready');},[ready]);
   if(ready) return children;
   return <section className="lotus-startup" role={error?'alert':'status'}>
-    <b>LotusTokenDash</b><p>{error?'本地数据服务连接失败':'正在连接本地数据服务…'}</p>
-    {error && <><small>{error}</small><button onClick={()=>retry(value=>value+1)}>重试</button></>}
+    <b>LotusTokenDash</b><p>{t(error?'Local data service unavailable':'Connecting to local data service…')}</p>
+    {error && <><small>{error}</small><button onClick={()=>retry(value=>value+1)}>{t('Retry')}</button></>}
   </section>;
 }
 export function mountDesktop(element:ReactNode) {

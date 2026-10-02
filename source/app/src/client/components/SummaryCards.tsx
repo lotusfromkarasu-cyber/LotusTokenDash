@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import type { DailyEntry, Totals } from '../../shared/types.js';
 import { formatTokens, formatUSD } from '../utils/formatters.js';
 
@@ -66,7 +67,7 @@ export function SummaryCards({ daily, totals }: SummaryCardsProps) {
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            {card.label}
+            {t(card.label)}
           </div>
           <div style={{
             fontSize: '28px',

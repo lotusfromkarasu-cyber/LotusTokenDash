@@ -38,7 +38,7 @@ pub fn run(app:tauri::AppHandle) {
             wait(&app,"details","ready",1).await?;
             if app.webview_windows().len()!=2 {return Err("More than one analytics window".into());}
             // Check that analysis API calls and React rendering have completed.
-            app.get_webview_window("details").ok_or("Details missing")?.eval("const check=setInterval(()=>{if(document.body.innerText.includes('Total tokens')&&!document.body.innerText.includes('Loading data')){clearInterval(check);window.__TAURI_INTERNALS__.invoke('renderer_status',{stage:'data'});}},100)").map_err(|e|e.to_string())?;
+            app.get_webview_window("details").ok_or("Details missing")?.eval("const check=setInterval(()=>{if(document.querySelector('[data-lotus-analysis-ready]')){clearInterval(check);window.__TAURI_INTERNALS__.invoke('renderer_status',{stage:'data'});}},100)").map_err(|e|e.to_string())?;
             wait(&app,"details","data",1).await?;
             for round in 2..=3 {
                 app.get_webview_window("details").ok_or("Details missing")?.close().map_err(|e|e.to_string())?;
@@ -47,9 +47,18 @@ pub fn run(app:tauri::AppHandle) {
                 hud.eval("window.dispatchEvent(new Event('lotus-refresh'))").map_err(|e|e.to_string())?;
                 wait(&app,"hud","data",round).await?;
             }
+            // A delayed drag completion must never undo a later dock request.
+            for _ in 0..3 {
+                let revision=super::begin_drag(app.state::<super::Service>());
+                super::set_layout(app.clone(),"hud".into(),false,1.0).await?;
+                super::set_layout(app.clone(),"strip".into(),false,1.0).await?;
+                let result=super::finish_drag(app.clone(),revision).await?;
+                if result.layout.mode!="strip" {return Err("Stale drag undid top docking".into());}
+            }
+            super::set_layout(app.clone(),"hud".into(),false,1.0).await?;
             Ok::<_,String>(())
         }.await;
-        let (passed,message)=match result {Ok(())=>(true,"native windows, analysis rendering, 8 concurrent IPC opens, 2 reopen cycles and HUD refresh".to_string()),Err(error)=>(false,error)};
+        let (passed,message)=match result {Ok(())=>(true,"native windows, analysis rendering, 8 concurrent IPC opens, 2 reopen cycles, HUD refresh and 3 stale-drag redock cycles".to_string()),Err(error)=>(false,error)};
         log(&app,&format!("self-test {passed}: {message}"));
         let directory=app.state::<Diagnostics>().directory.clone();
         let _=std::fs::write(directory.join("native-result.json"),serde_json::json!({"passed":passed,"message":message}).to_string());

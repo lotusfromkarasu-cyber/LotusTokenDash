@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Dashboard } from './Dashboard.js';
 import { getSource, setSource } from '../desktop.js';
 import type { QuotaSnapshot } from '../../server/quota/types.js';
+import { t, useLanguage, setLanguage, locale } from '../i18n.js';
 
 type Source = { id: string; label: string; sessions: number };
 export function LotusShell() {
+  const language=useLanguage();
   const [sources, setSources] = useState<Source[]>([{ id: 'openai', label: 'OpenAI 官方', sessions: 0 }]);
   const [source, choose] = useState(getSource());
   const [quotas, setQuotas] = useState<QuotaSnapshot[]>([]);
@@ -18,20 +20,21 @@ export function LotusShell() {
   }, []);
   const change = (id: string) => { setSource(id); choose(id); };
   async function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError('正在验证…');
+    event.preventDefault(); setError('Validating…');
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const res = await fetch('/api/lotus/credentials', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    const result = await res.json(); setError(res.ok ? '已保存' : result.status?.message ?? result.error ?? '验证失败');
+    const result = await res.json(); setError(res.ok ? 'Saved' : result.status?.message ?? result.error ?? 'Validation failed');
   }
   return <>
     <header className="lotus-header">
-      <div className="lotus-brand"><span className="lotus-symbol">✳</span><div><b>LotusTokenDash</b><small>LOCAL USAGE · CLEAR PERSPECTIVE</small></div></div>
-      <label className="lotus-source">Codex 来源<select aria-label="Codex 数据来源" value={source} onChange={e => change(e.target.value)}>{sources.map(item => <option value={item.id} key={item.id}>{item.label} · {item.sessions}</option>)}</select></label>
-      <button className="lotus-button" onClick={() => showSettings(!settings)}>配额设置</button>
+      <div className="lotus-brand"><span className="lotus-symbol">✳</span><div><b>LotusTokenDash</b><small>{t('LOCAL USAGE · CLEAR PERSPECTIVE')}</small></div></div>
+      <label className="lotus-source">{t('Codex source')}<select aria-label={t('Codex data source')} value={source} onChange={e => change(e.target.value)}>{sources.map(item => <option value={item.id} key={item.id}>{item.id==='openai'?t('OpenAI Official'):item.id==='unknown'?t('Unknown source'):item.label} · {item.sessions}</option>)}</select></label>
+      <select className="lotus-language" aria-label="Language / 语言" value={language} onChange={event=>setLanguage(event.target.value as 'en'|'zh')}><option value="zh">中文</option><option value="en">English</option></select>
+      <button className="lotus-button" onClick={() => showSettings(!settings)}>{t('Quota settings')}</button>
     </header>
-    <div className="lotus-scope-note">Codex 按来源独立统计 · 金额为模型价格估算 · 订阅额度使用官方配额接口</div>
-    <section className="lotus-quotas" aria-label="订阅配额">{quotas.map(quota => <article key={quota.provider}><strong>{quota.displayName}</strong><small>{quota.planName ?? quota.status.message ?? ''}</small>{quota.windows.map(window => <div key={window.id} className="lotus-quota-window"><span>{window.label}</span><meter min="0" max="100" value={window.usedPercent} /><b>{window.usedPercent.toFixed(0)}%</b><small>{window.resetsAt ? new Date(window.resetsAt).toLocaleString() + ' 重置' : ''}</small></div>)}</article>)}</section>
-    {settings && <form className="lotus-credential" onSubmit={event => void save(event)}><label>提供商<select name="provider"><option value="glm">GLM</option><option value="minimax">MiniMax</option><option value="kimi">Kimi</option></select></label><label>API Token<input name="apiKey" type="password" autoComplete="off" placeholder="留空并保存可移除配置" /></label><label>Base URL（可选）<input name="baseUrl" type="url" /></label><button className="lotus-button" type="submit">验证并保存</button><span role="status">{error}</span></form>}
+    <div className="lotus-scope-note">{t('Codex sources are counted separately · Costs are model price estimates · Subscription quota uses the official API')}</div>
+    <section className="lotus-quotas" aria-label={t('Subscription quota')}>{quotas.map(quota => <article key={quota.provider}><strong>{quota.displayName}</strong><small>{quota.planName ?? quota.status.message ?? ''}</small>{quota.windows.map(window => <div key={window.id} className="lotus-quota-window"><span>{t(window.label)}</span><meter min="0" max="100" value={window.usedPercent} /><b>{window.usedPercent.toFixed(0)}%</b><small>{window.resetsAt ? new Date(window.resetsAt).toLocaleString(locale()) + ' '+t('Resets') : ''}</small></div>)}</article>)}</section>
+    {settings && <form className="lotus-credential" onSubmit={event => void save(event)}><label>{t('Provider')}<select name="provider"><option value="glm">GLM</option><option value="minimax">MiniMax</option><option value="kimi">Kimi</option></select></label><label>API Token<input name="apiKey" type="password" autoComplete="off" placeholder={t('Leave empty and save to remove credentials')} /></label><label>{t('Base URL (optional)')}<input name="baseUrl" type="url" /></label><button className="lotus-button" type="submit">{t('Validate and save')}</button><span role="status">{t(error)}</span></form>}
     <Dashboard key={source} />
   </>;
 }
