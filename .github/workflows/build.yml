@@ -75,8 +75,8 @@ jobs:
           $portable = Join-Path $env:GITHUB_WORKSPACE 'build/portable/LotusTokenDash'
           New-Item -ItemType Directory -Path $portable -Force | Out-Null
           Copy-Item 'build/rust-target/release/lotus-token-dash.exe' (Join-Path $portable 'LotusTokenDash.exe')
-          Copy-Item 'source/desktop/binaries/lotus-node-x86_64-pc-windows-msvc.exe' (Join-Path $portable 'lotus-node.exe')
-          Copy-Item 'source/desktop/resources/service' $portable -Recurse
+          Copy-Item 'runtime/desktop/lotus-node-x86_64-pc-windows-msvc.exe' (Join-Path $portable 'lotus-node.exe')
+          Copy-Item 'build/service' $portable -Recurse
           Copy-Item 'LICENSE','README.md' $portable
           Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.0-Windows-x64-portable.zip'
       - uses: actions/upload-artifact@v4

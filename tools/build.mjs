@@ -10,16 +10,13 @@ await vite({ root: app, configFile: join(app, 'vite.config.ts') });
 const common = { bundle: true, platform: 'node', target: 'node22', format: 'esm',
   banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" },
   packages: 'bundle', sourcemap: false };
-await bundle({ ...common, entryPoints:[join(app,'src/server/desktop.ts')], outfile:join(root,'build/server/desktop.mjs') });
-await bundle({ ...common, entryPoints:[join(app,'src/server/codexResponseWorker.ts')], outfile:join(root,'build/server/worker.mjs') });
+await bundle({ ...common, entryPoints:[join(app,'src/server/desktop.ts')], outfile:join(root,'build/service/desktop.mjs') });
+await bundle({ ...common, entryPoints:[join(app,'src/server/codexResponseWorker.ts')], outfile:join(root,'build/service/worker.mjs') });
 await writeFile(join(root,'build/package.json'), JSON.stringify({ name:'lotus-token-dash',version:'0.1.0',type:'module' }));
-const resources = join(root,'source/desktop/resources/service');
-await mkdir(resources,{recursive:true});
-await cp(join(root,'build/server'),resources,{recursive:true});
 const platform = process.platform;
 const arch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
 const triple = platform==='win32' ? `${arch}-pc-windows-msvc` : platform==='darwin' ? `${arch}-apple-darwin` : `${arch}-unknown-linux-gnu`;
-const binaries=join(root,'source/desktop/binaries'); await mkdir(binaries,{recursive:true});
+const binaries=join(root,'runtime/desktop'); await mkdir(binaries,{recursive:true});
 const binary=join(binaries,`lotus-node-${triple}${platform==='win32'?'.exe':''}`);
 await cp(process.execPath,binary); if(platform!=='win32') await chmod(binary,0o755);
 console.log(`Frontend, data service and ${triple} runtime prepared.`);

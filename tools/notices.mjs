@@ -23,6 +23,6 @@ for(const name of Object.keys(JSON.parse(readFileSync(join(app,'package.json'),'
 const response=await fetch(`https://raw.githubusercontent.com/nodejs/node/${process.version}/LICENSE`,{signal:AbortSignal.timeout(45_000)});
 if(!response.ok)throw new Error(`Node license: ${response.status}`);
 text+=`\n---\n\n## Node.js ${process.version}\n\n${await response.text()}`;
-const out=join(root,'source/desktop/resources/service');await mkdir(out,{recursive:true});
+const out=join(root,'build/service');await mkdir(out,{recursive:true});
 await writeFile(join(out,'THIRD_PARTY_NOTICES.md'),text);
 console.log(`Included notices for ${seen.size} packages and Node.js.`);
