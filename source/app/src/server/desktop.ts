@@ -42,7 +42,7 @@ app.get('/api/lotus/today', async (_req, res) => {
   try {
     // Local day follows the computer's timezone, including DST.
     const today = new Date(); const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const end = new Date(start); end.setDate(end.getDate() + 1);
+    const end = new Date(start); end.setDate(end.getDate() + 1); end.setTime(end.getTime()-1);
     const response = await getCodexResponse('daily', { since: start, until: end });
     const totals = response.totals;
     const input = totals.inputTokens + totals.cacheReadTokens;

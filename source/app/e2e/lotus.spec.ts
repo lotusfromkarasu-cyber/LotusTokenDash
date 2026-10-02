@@ -11,7 +11,10 @@ test('switching provider changes requests and never reuses the previous provider
     response.totals.totalTokens*=factor;
     await route.fulfill({json:response});
   });
+  await page.setViewportSize({width:1360,height:900});
   await page.goto('/'); await expect(page.getByLabel('Codex 数据来源')).toBeVisible();
+  await expect(page.getByText('Total tokens',{exact:true}).first()).toBeVisible();
+  await page.screenshot({path:'../../build/details-preview.png'});
   const changed=page.waitForRequest(req=>req.url().includes('/api/daily')&&req.headers()['x-lotus-source']==='custom:proxy');
   await page.getByLabel('Codex 数据来源').selectOption('custom:proxy'); await changed;
   const back=page.waitForRequest(req=>req.url().includes('/api/daily')&&req.headers()['x-lotus-source']==='openai');

@@ -19,7 +19,7 @@ import { CodexDataSourcesSettings } from './CodexDataSourcesSettings.js';
 import { SessionAnalyticsSection } from './SessionAnalyticsSection.js';
 import type { DailyEntry, MetricMode } from '../../shared/types.js';
 
-const C = ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6', '#ef4444', '#14b8a6'];
+const C = ['#6F252A', '#AF8369', '#22222B', '#B8AA78', '#7E6B67', '#C09B86', '#945A61', '#7D8270'];
 
 // Model pricing display (USD per 1M tokens) — keep in sync with claudeJsonlParser.ts
 const MODEL_PRICING_DISPLAY: Record<string, { input: string; cache: string; output: string }> = {
@@ -950,7 +950,7 @@ export function Dashboard() {
                           <div
                             key={hourIdx}
                             className="flex-1 rounded-[3px] relative group transition-all hover:ring-2 hover:ring-emerald-400 hover:ring-offset-1 hover:z-10"
-                            style={{ backgroundColor: val > 0 ? `rgba(16, 185, 129, ${opacity})` : '#ebedf0' }}
+                            style={{ backgroundColor: val > 0 ? `rgba(111, 37, 42, ${opacity})` : '#EDEDED' }}
                           >
                             {val > 0 && (
                               <div className="absolute opacity-0 group-hover:opacity-100 z-20 bg-stone-900 text-white text-[10px] px-2 py-1 rounded bottom-full mb-1.5 left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap shadow-lg font-mono">

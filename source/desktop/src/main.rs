@@ -1,15 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use std::{io::{BufRead, BufReader}, process::{Child, Command, Stdio}, sync::{Arc, Mutex}, time::Duration};
 use tauri::{Emitter, Manager, PhysicalPosition, LogicalSize, WebviewUrl, WebviewWindowBuilder};
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{Menu, MenuItem, CheckMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Address { port: u16, token: String }
 #[derive(Clone, Serialize, Deserialize)]
-struct Layout { mode: String, scale: f64, x: i32, y: i32 }
-impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80 } } }
+struct Layout { mode: String, scale: f64, x: i32, y: i32, #[serde(default="enabled")] topmost: bool }
+fn enabled() -> bool { true }
+impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true } } }
 struct Service {
     address: Arc<Mutex<Option<Result<Address, String>>>>,
     child: Mutex<Option<Child>>,
@@ -30,7 +31,7 @@ fn save_layout(app: &tauri::AppHandle) {
         let state = app.state::<Service>();
         if let Ok(layout) = state.layout.lock() {
             let _ = std::fs::write(dir.join("window.json"), serde_json::to_vec(&*layout).unwrap_or_default());
-        }
+        };
     }
 }
 #[tauri::command]
@@ -117,14 +118,25 @@ fn main() {
                 Err(error) => { *address.lock().unwrap()=Some(Err(error.to_string())); }
             }
             let show = MenuItem::with_id(app,"show","显示 HUD",true,None::<&str>)?;
+            let hide = MenuItem::with_id(app,"hide","隐藏 HUD",true,None::<&str>)?;
+            let refresh = MenuItem::with_id(app,"refresh","刷新使用量",true,None::<&str>)?;
+            let topmost = CheckMenuItem::with_id(app,"topmost","始终置顶",true,true,None::<&str>)?;
+            let topmost_check=topmost.clone();
             let details = MenuItem::with_id(app,"details","打开详细分析",true,None::<&str>)?;
             let strip = MenuItem::with_id(app,"strip","顶部吸附细条",true,None::<&str>)?;
             let hud = MenuItem::with_id(app,"hud","悬浮 HUD",true,None::<&str>)?;
             let quit = MenuItem::with_id(app,"quit","退出",true,None::<&str>)?;
-            let menu = Menu::with_items(app,&[&show,&details,&strip,&hud,&quit])?;
+            let menu = Menu::with_items(app,&[&show,&hide,&details,&refresh,&strip,&hud,&topmost,&quit])?;
             TrayIconBuilder::new().icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
-                .on_menu_event(|app,event| match event.id.as_ref() {
+                .on_menu_event(move |app,event| match event.id.as_ref() {
                     "show" => show_hud(app),
+                    "hide" => hide_hud(app.clone()),
+                    "refresh" => { let _=app.emit("lotus-refresh",()); },
+                    "topmost" => {
+                        let checked=topmost_check.is_checked().unwrap_or(true); let _=topmost_check.set_checked(!checked);
+                        if let Some(window)=app.get_webview_window("hud") { let _=window.set_always_on_top(!checked); }
+                        app.state::<Service>().layout.lock().unwrap().topmost=!checked;save_layout(app);
+                    },
                     "details" => { let _ = open_details(app.clone()); },
                     "strip" | "hud" => {
                         let mode=event.id.as_ref(); let scale=app.state::<Service>().layout.lock().unwrap().scale;
@@ -136,7 +148,8 @@ fn main() {
             if let Ok(bytes) = std::fs::read(data.join("window.json")) {
                 if let Ok(layout) = serde_json::from_slice::<Layout>(&bytes) {
                     let mode=layout.mode.clone(); let scale=layout.scale;
-                    if let Some(window)=app.get_webview_window("hud") { let _ = window.set_position(PhysicalPosition::new(layout.x,layout.y)); }
+                    if let Some(window)=app.get_webview_window("hud") { let _ = window.set_position(PhysicalPosition::new(layout.x,layout.y)); let _=window.set_always_on_top(layout.topmost); }
+                    let _=topmost.set_checked(layout.topmost);
                     *app.state::<Service>().layout.lock().unwrap()=layout;
                     let _=set_layout(handle.clone(),mode.clone(),false,scale);
                 }
@@ -147,7 +160,7 @@ fn main() {
     app.run(|app,event| {
         if matches!(event,tauri::RunEvent::Exit) {
             let state=app.state::<Service>();
-            if let Some(mut child)=state.child.lock().unwrap().take() { drop(child.stdin.take()); let _=child.wait(); }
+            if let Some(mut child)=state.child.lock().unwrap().take() { drop(child.stdin.take()); let _=child.wait(); };
         }
     });
 }

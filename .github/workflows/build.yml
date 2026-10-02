@@ -68,3 +68,8 @@ jobs:
           name: LotusTokenDash-${{ runner.os }}
           path: build/rust-target/release/bundle/**/*
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: steps.select.outputs.build == 'true' && always()
+        with:
+          name: LotusTokenDash-build-metadata-${{ runner.os }}
+          path: source/desktop/Cargo.lock

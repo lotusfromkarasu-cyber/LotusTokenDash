@@ -26,12 +26,14 @@ export function useCcusageData<T>(fetcher: (refresh?: boolean) => Promise<T>, in
   // 首次加载 + fetcher 变化时重新拉取
   useEffect(() => {
     fetchData();
+    const refresh=()=>void fetchData(true); window.addEventListener('lotus-refresh',refresh);
+    return ()=>window.removeEventListener('lotus-refresh',refresh);
   }, [fetchData]);
 
   // 定时自动刷新
   useEffect(() => {
     if (intervalMs <= 0) return;
-    timerRef.current = setInterval(() => { void fetchData(false); }, intervalMs);
+    timerRef.current = setInterval(() => { if (!document.hidden) void fetchData(false); }, intervalMs);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };

@@ -34,6 +34,7 @@ function Hud() {
   const refreshRef = useRef<() => void>(()=>{});
   useEffect(() => {
     const changed=()=>choose(getSource()); window.addEventListener('lotus-source-change',changed);
+    const refresh=()=>refreshRef.current(); window.addEventListener('lotus-refresh',refresh);
     let active = true;
     const update = async () => {
       try { const res = await fetch('/api/lotus/today'); if (!res.ok) throw new Error(`统计读取失败 (${res.status})`);
@@ -42,7 +43,7 @@ function Hud() {
     };
     setToday(null); refreshRef.current = () => void update(); void update();
     const timer = setInterval(() => { if (!document.hidden) void update(); },60_000);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('lotus-source-change',changed); };
+    return () => { active = false; clearInterval(timer); window.removeEventListener('lotus-source-change',changed); window.removeEventListener('lotus-refresh',refresh); };
   },[source]);
   useEffect(() => {
     const refreshQuota = () => { if (!document.hidden) void fetch('/api/lotus/codex-quota').then(res=>res.json()).then(setQuota).catch(()=>{}); };

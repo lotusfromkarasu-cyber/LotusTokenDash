@@ -9,6 +9,7 @@ export async function initializeDesktop() {
     if(source===event.payload) return;
     source=event.payload; localStorage.setItem('lotus-source',source); window.dispatchEvent(new Event('lotus-source-change'));
   });
+  if(isTauri()) await listen('lotus-refresh',()=>window.dispatchEvent(new Event('lotus-refresh')));
   // Preview can supply a local test-service address; packaged windows get it from Rust.
   const endpoint = isTauri()
     ? await invoke<{ port: number; token: string }>('service_address')
