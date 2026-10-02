@@ -78,12 +78,14 @@ jobs:
           Copy-Item 'runtime/desktop/lotus-node-x86_64-pc-windows-msvc.exe' (Join-Path $portable 'lotus-node.exe')
           Copy-Item 'build/service' $portable -Recurse
           Copy-Item 'LICENSE','README.md' $portable
-          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.0-Windows-x64-portable.zip'
+          node tools/native-smoke.mjs (Join-Path $portable 'LotusTokenDash.exe')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.1-Windows-x64-portable.zip'
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && runner.os == 'Windows'
         with:
           name: LotusTokenDash-Windows-portable
-          path: build/LotusTokenDash-0.1.0-Windows-x64-portable.zip
+          path: build/LotusTokenDash-0.1.1-Windows-x64-portable.zip
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && always()
         with:

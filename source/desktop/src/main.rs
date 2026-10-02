@@ -4,6 +4,7 @@ use tauri::{Emitter, Manager, PhysicalPosition, LogicalSize, WebviewUrl, Webview
 use tauri::menu::{Menu, MenuItem, CheckMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use serde::{Serialize, Deserialize};
+mod diagnostics;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Address { port: u16, token: String }
@@ -15,6 +16,7 @@ struct Service {
     address: Arc<Mutex<Option<Result<Address, String>>>>,
     child: Mutex<Option<Child>>,
     layout: Mutex<Layout>,
+    details_gate: Arc<Mutex<()>>,
 }
 #[tauri::command]
 fn layout_state(state: tauri::State<'_, Service>) -> Layout { state.layout.lock().unwrap().clone() }
@@ -27,6 +29,7 @@ async fn service_address(state: tauri::State<'_, Service>) -> Result<Address, St
     Err("本地统计服务未能启动，请查看应用数据目录中的 service.log".into())
 }
 fn save_layout(app: &tauri::AppHandle) {
+    if diagnostics::enabled() { return; }
     if let Ok(dir) = app.path().app_data_dir() {
         let state = app.state::<Service>();
         if let Ok(layout) = state.layout.lock() {
@@ -81,11 +84,30 @@ fn finish_drag(app: tauri::AppHandle) -> Result<(), String> {
     save_layout(&app); let _ = app.emit("lotus-mode", serde_json::json!({"mode":mode})); Ok(())
 }
 #[tauri::command]
-fn open_details(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("details") { let _ = window.show(); return window.set_focus().map_err(|e|e.to_string()); }
-    WebviewWindowBuilder::new(&app,"details",WebviewUrl::App("index.html".into()))
-        .title("LotusTokenDash · 使用分析").inner_size(1280.0,880.0).min_inner_size(760.0,560.0).center().build().map_err(|e|e.to_string())?;
-    Ok(())
+async fn open_details(app: tauri::AppHandle) -> Result<(), String> {
+    // WebView2 creation must not run inside a synchronous IPC/tray callback.
+    // Serialize the lookup and creation together: simultaneous entry points
+    // must reuse the same window, including while its WebView2 is initializing.
+    let gate = app.state::<Service>().details_gate.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = gate.lock().map_err(|e|e.to_string())?;
+        let testing = diagnostics::enabled();
+        if let Some(window) = app.get_webview_window("details") {
+            if !testing {
+                window.unminimize().map_err(|e|e.to_string())?;
+                window.show().map_err(|e|e.to_string())?;
+                window.set_focus().map_err(|e|e.to_string())?;
+            }
+            diagnostics::log(&app,"details reused");
+            return Ok(());
+        }
+        diagnostics::log(&app,"details creating");
+        WebviewWindowBuilder::new(&app,"details",WebviewUrl::App("index.html".into()))
+            .title("LotusTokenDash · 使用分析").inner_size(1280.0,880.0).min_inner_size(760.0,560.0)
+            .visible(!testing).focused(!testing).center().build().map_err(|e|e.to_string())?;
+        diagnostics::log(&app,"details created");
+        Ok(())
+    }).await.map_err(|e|e.to_string())?
 }
 #[tauri::command]
 fn hide_hud(app: tauri::AppHandle) { if let Some(window) = app.get_webview_window("hud") { let _ = window.hide(); } }
@@ -94,11 +116,22 @@ fn main() {
     let address = Arc::new(Mutex::new(None));
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app,_,_| show_hud(app)))
-        .manage(Service { address:address.clone(), child:Mutex::new(None), layout:Mutex::new(Layout::default()) })
-        .invoke_handler(tauri::generate_handler![service_address,layout_state,set_layout,finish_drag,open_details,hide_hud])
+        .manage(Service { address:address.clone(), child:Mutex::new(None), layout:Mutex::new(Layout::default()), details_gate:Arc::new(Mutex::new(())) })
+        .invoke_handler(tauri::generate_handler![service_address,layout_state,set_layout,finish_drag,open_details,hide_hud,diagnostics::renderer_status])
+        .on_window_event(|window,event| {
+            if window.label()=="details" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close(); let _=window.hide();
+                }
+            }
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
-            let data = app.path().app_data_dir()?; std::fs::create_dir_all(&data)?;
+            let data = if diagnostics::enabled() { std::path::PathBuf::from(std::env::var("LOTUS_TEST_DATA_DIR")?) } else { app.path().app_data_dir()? };
+            std::fs::create_dir_all(&data)?;
+            app.manage(diagnostics::Diagnostics::new(data.clone()));
+            diagnostics::log(&handle,concat!("startup v",env!("CARGO_PKG_VERSION")));
+            if !diagnostics::enabled() { show_hud(&handle); }
             let script = app.path().resource_dir()?.join("service/desktop.mjs");
             let executable = std::env::current_exe()?.parent().ok_or("Executable directory missing")?.join(if cfg!(windows) {"lotus-node.exe"} else {"lotus-node"});
             let mut command = Command::new(executable); command.arg(script).env("LOTUS_DATA_DIR", &data).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::from(std::fs::File::create(data.join("service.log"))?));
@@ -108,10 +141,18 @@ fn main() {
                     let stdout = child.stdout.take().ok_or("Service stdout unavailable")?;
                     *app.state::<Service>().child.lock().unwrap() = Some(child);
                     let ready = address.clone();
+                    let service_handle = handle.clone();
                     std::thread::spawn(move || {
+                        let mut started=false;
                         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-                            if let Ok(value) = serde_json::from_str::<Address>(&line) { *ready.lock().unwrap() = Some(Ok(value)); return; }
+                            if !started {
+                                if let Ok(value) = serde_json::from_str::<Address>(&line) {
+                                    *ready.lock().unwrap() = Some(Ok(value)); started=true;
+                                    diagnostics::log(&service_handle,"service ready");
+                                }
+                            }
                         }
+                        diagnostics::log(&service_handle,"service closed");
                         *ready.lock().unwrap() = Some(Err("本地数据服务启动失败".into()));
                     });
                 },
@@ -137,7 +178,9 @@ fn main() {
                         if let Some(window)=app.get_webview_window("hud") { let _=window.set_always_on_top(!checked); }
                         app.state::<Service>().layout.lock().unwrap().topmost=!checked;save_layout(app);
                     },
-                    "details" => { let _ = open_details(app.clone()); },
+                    "details" => { let app=app.clone(); tauri::async_runtime::spawn(async move {
+                        if let Err(error)=open_details(app.clone()).await { diagnostics::log(&app,&format!("details failed: {error}")); }
+                    }); },
                     "strip" | "hud" => {
                         let mode=event.id.as_ref(); let scale=app.state::<Service>().layout.lock().unwrap().scale;
                         let _ = set_layout(app.clone(),mode.into(),false,scale); let _ = app.emit("lotus-mode",serde_json::json!({"mode":mode})); show_hud(app);
@@ -154,6 +197,7 @@ fn main() {
                     let _=set_layout(handle.clone(),mode.clone(),false,scale);
                 }
             }
+            if diagnostics::enabled() { diagnostics::run(handle); }
             Ok(())
         });
     let app=builder.build(tauri::generate_context!()).expect("Unable to start LotusTokenDash");

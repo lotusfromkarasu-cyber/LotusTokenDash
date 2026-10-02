@@ -1,22 +1,63 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LotusTokenDash",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.lotus.tokendash",
-  "build": { "frontendDist": "../../build/frontend" },
+  "build": {
+    "frontendDist": "../../build/frontend"
+  },
   "app": {
     "macOSPrivateApi": true,
-    "windows": [{ "label": "hud", "title": "LotusTokenDash", "url": "hud.html", "width": 324, "height": 142, "x": 80, "y": 80, "decorations": false, "transparent": true, "shadow": false, "resizable": false, "alwaysOnTop": true, "skipTaskbar": true }],
-    "security": { "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost http://127.0.0.1:*" }
+    "windows": [
+      {
+        "label": "hud",
+        "title": "LotusTokenDash",
+        "url": "hud.html",
+        "width": 324,
+        "height": 142,
+        "x": 80,
+        "y": 80,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost http://127.0.0.1:*"
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
-    "externalBin": ["../../runtime/desktop/lotus-node"],
-    "resources": { "../../build/service/": "service/" },
-    "windows": { "nsis": { "displayLanguageSelector": true, "languages": ["SimpChinese", "English"] } },
-    "macOS": { "minimumSystemVersion": "11.0" },
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico",
+      "icons/icon.icns"
+    ],
+    "externalBin": [
+      "../../runtime/desktop/lotus-node"
+    ],
+    "resources": {
+      "../../build/service/": "service/"
+    },
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": true,
+        "languages": [
+          "SimpChinese",
+          "English"
+        ]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
     "shortDescription": "Local token analytics and quota HUD",
     "category": "DeveloperTool"
   }

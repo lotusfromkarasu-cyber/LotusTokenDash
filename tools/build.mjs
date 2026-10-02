@@ -1,6 +1,6 @@
 import { build as bundle } from '../source/app/node_modules/esbuild/lib/main.js';
 import { build as vite } from '../source/app/node_modules/vite/dist/node/index.js';
-import { cp, mkdir, writeFile, chmod } from 'node:fs/promises';
+import { cp, mkdir, writeFile, readFile, chmod } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -12,7 +12,7 @@ const common = { bundle: true, platform: 'node', target: 'node22', format: 'esm'
   packages: 'bundle', sourcemap: false };
 await bundle({ ...common, entryPoints:[join(app,'src/server/desktop.ts')], outfile:join(root,'build/service/desktop.mjs') });
 await bundle({ ...common, entryPoints:[join(app,'src/server/codexResponseWorker.ts')], outfile:join(root,'build/service/worker.mjs') });
-await writeFile(join(root,'build/package.json'), JSON.stringify({ name:'lotus-token-dash',version:'0.1.0',type:'module' }));
+await writeFile(join(root,'build/package.json'), JSON.stringify({ name:'lotus-token-dash',version:JSON.parse(await readFile(join(app,'package.json'),'utf8')).version,type:'module' }));
 const platform = process.platform;
 const arch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
 const triple = platform==='win32' ? `${arch}-pc-windows-msvc` : platform==='darwin' ? `${arch}-apple-darwin` : `${arch}-unknown-linux-gnu`;
