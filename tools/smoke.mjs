@@ -9,7 +9,7 @@ const testDir=join(root,'build/smoke-fixtures'); await mkdir(join(testDir,'sessi
 const stamp=new Date().toISOString();
 function session(id,provider,input,cached) {return [{type:'session_meta',payload:{id,cwd:'K:\\project',model_provider:provider,timestamp:stamp}},{type:'turn_context',payload:{model:'same-model'}},{type:'event_msg',timestamp:stamp,payload:{type:'token_count',info:{total_token_usage:{input_tokens:input,cached_input_tokens:cached,output_tokens:10,total_tokens:input+10}}}}].map(x=>JSON.stringify(x)).join('\n');}
 for(const [id,provider,input,cached] of [['official','openai',100,60],['proxy','proxy',300,30],['unknown',undefined,70,0]]) await writeFile(join(testDir,`sessions/rollout-${id}.jsonl`),session(id,provider,input,cached));
-const child=spawn(process.execPath,[join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
+const child=spawn(process.execPath,[process.argv[2]??join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
 let errors='';child.stderr.on('data',chunk=>{errors+=chunk.toString();});
 try {
   const address=await new Promise((resolve,reject)=>{
