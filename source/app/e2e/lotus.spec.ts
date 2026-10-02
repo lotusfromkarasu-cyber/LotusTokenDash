@@ -29,6 +29,7 @@ test('HUD keeps both quota windows, source-specific today stats and hover strip 
     else await route.fulfill({json:{provider:'codex',freshness:'live',status:{state:'ok'},windows:[{id:'five',durationMins:300,usedPercent:25},{id:'week',durationMins:10080,usedPercent:40}]}});
   });
   await page.goto('/hud.html');await expect(page.locator('.daily')).toContainText('11K'); await expect(page.locator('.daily')).toContainText('60.0%');
+  const fits=await page.locator('.hud').evaluate(node=>{const box=node.getBoundingClientRect();const daily=node.querySelector('.daily')!.getBoundingClientRect();return daily.bottom<=box.bottom;});expect(fits).toBe(true);
   await page.locator('.hud').hover(); await expect(page.getByLabel('统计来源')).toBeVisible();
   await page.getByLabel('统计来源').selectOption('custom:proxy'); await expect(page.locator('.daily')).toContainText('22K');await expect(page.locator('.daily')).toContainText('20.0%');
   await page.getByTitle('吸附顶部细条').click(); await expect(page.locator('.hud')).toHaveClass(/thin/);

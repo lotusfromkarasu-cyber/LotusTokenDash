@@ -1,4 +1,5 @@
 // Push verified Git trees through REST when Git HTTPS is unavailable.
+import './network.mjs';
 import { execFileSync } from 'node:child_process';
 const git=process.platform==='win32'?'C:/Program Files/Git/cmd/git.exe':'git';
 const run=(...args)=>execFileSync(git,args,{windowsHide:true});

@@ -23,3 +23,4 @@ const binaries=join(root,'source/desktop/binaries'); await mkdir(binaries,{recur
 const binary=join(binaries,`lotus-node-${triple}${platform==='win32'?'.exe':''}`);
 await cp(process.execPath,binary); if(platform!=='win32') await chmod(binary,0o755);
 console.log(`Frontend, data service and ${triple} runtime prepared.`);
+await import('./notices.mjs');
