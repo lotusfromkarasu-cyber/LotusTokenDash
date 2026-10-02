@@ -56,6 +56,9 @@ jobs:
         run: node tools/tasks.mjs build
       - name: Desktop package
         if: steps.select.outputs.build == 'true'
+        run: node tools/smoke.mjs
+      - name: Native desktop package
+        if: steps.select.outputs.build == 'true'
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
         run: node tools/tasks.mjs desktop --bundles ${{ matrix.bundles }}

@@ -10,6 +10,7 @@ import {
   type SessionAnalyticsRange,
 } from '../sessionAnalyticsParser.js';
 import type { SessionStatus } from '../../shared/types.js';
+import { getCodexResponse } from '../codexResponseService.js';
 
 const RANGES = new Set<SessionAnalyticsRange>(['today', '7d', '30d', '60d', 'all']);
 const STATUSES = new Set<SessionStatus>(['active', 'complete', 'interrupted', 'unknown']);
@@ -52,15 +53,17 @@ function cacheKey(agent: string, filters: SessionAnalyticsFilters, revision: str
   return `session-analytics:${agent}:${filters.project || 'all'}:${filters.range || 'all'}:${filters.model || 'all'}:${filters.status || 'all'}:${filters.query || ''}:${filters.cursor || ''}:${filters.limit || 20}:${revision}`;
 }
 
-function fetchAnalytics(agent: string, filters: SessionAnalyticsFilters, revision: string) {
-  return validateSessionAnalytics(getSessionAnalytics(agent, filters, revision));
+async function fetchAnalytics(agent: string, filters: SessionAnalyticsFilters, revision: string) {
+  return validateSessionAnalytics(agent === 'codex'
+    ? await getCodexResponse('sessionAnalytics', { sessionFilters: filters })
+    : getSessionAnalytics(agent, filters, revision));
 }
 
 function refreshAnalyticsCache(agent: string, filters: SessionAnalyticsFilters): void {
   Promise.resolve()
-    .then(() => {
+    .then(async () => {
       const revision = getSessionAnalyticsSourceRevision(agent);
-      cache.set(cacheKey(agent, filters, revision), fetchAnalytics(agent, filters, revision));
+      cache.set(cacheKey(agent, filters, revision), await fetchAnalytics(agent, filters, revision));
     })
     .catch(error => console.error('Background refresh failed (session analytics):', error));
 }
@@ -87,7 +90,7 @@ export async function getSessionAnalyticsRoute(req: Request, res: Response): Pro
         return;
       }
     }
-    const data = fetchAnalytics(agent, filters, revision);
+    const data = await fetchAnalytics(agent, filters, revision);
     cache.set(key, data);
     res.json(data);
   } catch (error) {
@@ -107,7 +110,9 @@ export async function getSessionDetailRoute(req: Request, res: Response): Promis
   }
   try {
     if (req.query.refresh === '1' || req.query.refresh === 'true') invalidateSessionAnalyticsSource(agent);
-    const detail = getSessionDetail(agent, id, undefined, req.query.include === 'content');
+    const detail = agent === 'codex'
+      ? await getCodexResponse('sessionDetail', { sessionId: id, includeContent: req.query.include === 'content' })
+      : getSessionDetail(agent, id, undefined, req.query.include === 'content');
     if (!detail) {
       res.status(404).json({ error: 'Session not found' });
       return;

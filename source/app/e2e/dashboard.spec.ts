@@ -100,7 +100,7 @@ test.describe('Agent: OpenCode', () => {
   });
 
   test('project select shows projects', async ({ page }) => {
-    const select = page.locator('select');
+    const select = page.getByLabel('Project');
     await expect(select).toBeVisible();
     // Check option count (options are always in DOM even if hidden in dropdown)
     const optCount = await select.locator('option').count();
@@ -373,7 +373,7 @@ test.describe('Agent switching', () => {
   test('switching agent updates project list', async ({ page }) => {
     await setupPage(page, { agents: ['claude', 'opencode'] });
 
-    const select = page.locator('select');
+    const select = page.getByLabel('Project');
     const optsBefore = await select.locator('option').count();
 
     // Switch to OpenCode
@@ -381,8 +381,8 @@ test.describe('Agent switching', () => {
     await page.waitForTimeout(3000);
 
     // Project list should update
-    await expect(page.locator('select')).toBeVisible();
-    const optsAfter = await page.locator('select').locator('option').count();
+    await expect(page.getByLabel('Project')).toBeVisible();
+    const optsAfter = await page.getByLabel('Project').locator('option').count();
     expect(optsAfter).toBeGreaterThan(0);
   });
 });
@@ -413,6 +413,7 @@ test.describe('Metric switching', () => {
   });
 
   test('Sessions renders session analytics and opens metadata detail', async ({ page }) => {
+    await selectAgent(page, 'Claude Code');
     await page.locator('button:has-text("Sessions")').click();
     await expect(page.locator('text=Session analytics')).toBeVisible();
     await expect(page.locator('text=LLM call trend')).toBeVisible();
@@ -563,7 +564,7 @@ test.describe('Project filter', () => {
   });
 
   test('selecting a project filters data', async ({ page }) => {
-    const select = page.locator('select');
+    const select = page.getByLabel('Project');
     await expect(select).toBeVisible();
 
     const options = select.locator('option');
@@ -604,7 +605,7 @@ test.describe('Chart rendering', () => {
 
   test('output/input ratio chart renders when project selected', async ({ page }) => {
     // Output/Input ratio panel only shows when a specific project is selected
-    const select = page.locator('select');
+    const select = page.getByLabel('Project');
     const options = select.locator('option');
     const optCount = await options.count();
     if (optCount > 1) {

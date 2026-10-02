@@ -56,11 +56,11 @@ describe('TokenDash daemon networking', () => {
       const fallback = await fetchJson(`http://${TOKEN_DASH_HOST}:${tokenDash.port}/api/app-info`);
 
       expect(foreign.status).toBe(200);
-      expect(foreign.body).not.toMatchObject({ packageName: '@zhangferry-dev/tokendash' });
+      expect(foreign.body).not.toMatchObject({ packageName: 'lotus-token-dash' });
       expect(fallback).toMatchObject({
         status: 200,
         body: {
-          packageName: '@zhangferry-dev/tokendash',
+          packageName: 'lotus-token-dash',
           version: expect.stringMatching(/^\d+\.\d+\.\d+/),
         },
       });

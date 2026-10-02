@@ -13,7 +13,7 @@ import type {
 } from '../shared/types.js';
 import { calculateCost as calculateClaudeCost, extractProjectName } from './claudeJsonlParser.js';
 import { parseAllSessions, scanCodexSessions, type ParsedSession } from './codexParser.js';
-import { scopeKey } from './providerScope.js';
+import { scopeKey, currentProvider, providerId } from './providerScope.js';
 import { calculateCost as calculateCodexCost } from './codexPricing.js';
 
 export type SessionAnalyticsRange = 'today' | '7d' | '30d' | '60d' | 'all';
@@ -392,9 +392,17 @@ function codexTranscriptMetadata(sessionId: string): CodexTranscriptMetadata {
 export function parseCodexTranscriptMetadata(raw: string): CodexTranscriptMetadata {
   const initial: CodexTranscriptMetadata = { userTurns: 0, toolCalls: 0, skillCalls: 0, events: [] };
   const records: Record<string, unknown>[] = [];
+  const scope = currentProvider();
+  let source = 'unknown';
   for (const line of raw.split('\n')) {
     if (!line.trim()) continue;
-    try { records.push(JSON.parse(line) as Record<string, unknown>); } catch { /* ignore malformed transcript rows */ }
+    try {
+      const record=JSON.parse(line) as Record<string, unknown>;
+      const payload=record.payload as Record<string,unknown> | undefined;
+      if(record.type==='session_meta') source=providerId(payload?.model_provider);
+      if(record.type==='turn_context' && typeof payload?.model_provider==='string') source=providerId(payload.model_provider);
+      if(!scope || scope===source) records.push(record);
+    } catch { /* ignore malformed transcript rows */ }
   }
   // Desktop Codex writes a canonical event_msg for an actual human turn. It
   // intentionally excludes the role=user envelope containing AGENTS.md and

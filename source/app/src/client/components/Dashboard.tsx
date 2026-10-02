@@ -117,7 +117,7 @@ function FilterTab({ options, value, onChange }: { options: readonly { key: stri
 
 function ProjectSelect({ projects, value, onChange }: { projects: string[]; value: string; onChange: (v: string) => void }) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}
+    <select aria-label="Project" value={value} onChange={e => onChange(e.target.value)}
       className="bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-stone-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 max-w-[220px]">
       <option value="">All Projects</option>
       {projects.map(p => <option key={p} value={p}>{formatProjectName(p, projects)}</option>)}

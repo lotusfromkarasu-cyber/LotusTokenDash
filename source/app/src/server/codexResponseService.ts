@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
-import type { DailyResponse, ProjectsResponse, BlocksResponse } from '../shared/types.js';
+import type { DailyResponse, ProjectsResponse, BlocksResponse, SessionAnalyticsResponse, SessionDetail } from '../shared/types.js';
+import { getSessionAnalytics, getSessionDetail, type SessionAnalyticsFilters } from './sessionAnalyticsParser.js';
 import { getBlocksResponse, getProviderGroups, getCodexResponses, getDailyResponse, getProjectsResponse, type AggregateOptions } from './codexParser.js';
 import { type BlockGranularity } from './claudeJsonlParser.js';
 import { currentProvider } from './providerScope.js';
@@ -13,9 +14,11 @@ interface CodexResponseBundle {
   blocks: BlocksResponse;
 }
 
-type CodexResponseKind = 'bundle' | 'daily' | 'projects' | 'blocks' | 'groups';
+type CodexResponseKind = 'bundle' | 'daily' | 'projects' | 'blocks' | 'groups' | 'sessionAnalytics' | 'sessionDetail';
 
 type CodexResponseByKind<K extends CodexResponseKind> =
+  K extends 'sessionAnalytics' ? SessionAnalyticsResponse :
+  K extends 'sessionDetail' ? SessionDetail | null :
   K extends 'groups' ? Array<{ id: string; label: string; sessions: number }> :
   K extends 'bundle' ? CodexResponseBundle :
   K extends 'daily' ? DailyResponse :
@@ -23,6 +26,9 @@ type CodexResponseByKind<K extends CodexResponseKind> =
   BlocksResponse;
 
 interface SerializedAggregateOptions {
+  sessionFilters?: SessionAnalyticsFilters;
+  sessionId?: string;
+  includeContent?: boolean;
   groupBy?: AggregateOptions['groupBy'];
   project?: string | null;
   since?: string | null;
@@ -50,9 +56,12 @@ let nextRequestId = 1;
 const inFlight = new Map<string, Promise<unknown>>();
 const resultCache = new Map<string, { data: unknown; expiresAt: number }>();
 
-function serializeOptions(options?: Partial<AggregateOptions> & { granularity?: BlockGranularity }): SerializedAggregateOptions | undefined {
+function serializeOptions(options?: CodexServiceOptions): SerializedAggregateOptions | undefined {
   if (!options) return undefined;
-  return {
+  const result = {
+    sessionFilters: options.sessionFilters,
+    sessionId: options.sessionId,
+    includeContent: options.includeContent,
     groupBy: options.groupBy,
     project: options.project,
     since: options.since ? options.since.toISOString() : options.since,
@@ -60,9 +69,10 @@ function serializeOptions(options?: Partial<AggregateOptions> & { granularity?: 
     timezone: options.timezone,
     granularity: options.granularity,
   };
+  return Object.fromEntries(Object.entries(result).filter(([,value])=>value!==undefined));
 }
 
-type CodexServiceOptions = Partial<AggregateOptions> & { granularity?: BlockGranularity };
+type CodexServiceOptions = Partial<AggregateOptions> & { granularity?: BlockGranularity; sessionFilters?: SessionAnalyticsFilters; sessionId?: string; includeContent?: boolean };
 
 function requestKey(kind: CodexResponseKind, options?: CodexServiceOptions): string {
   return `${currentProvider() ?? 'upstream'}:${kind}:${JSON.stringify(serializeOptions(options) ?? {})}`;
@@ -104,6 +114,8 @@ function workerExecArgv(workerPath: string): string[] {
 
 function runSync<K extends CodexResponseKind>(kind: K, options?: CodexServiceOptions): CodexResponseByKind<K> {
   switch (kind) {
+    case 'sessionAnalytics': return getSessionAnalytics('codex', options?.sessionFilters ?? {}) as CodexResponseByKind<K>;
+    case 'sessionDetail': return getSessionDetail('codex', options?.sessionId ?? '', undefined, options?.includeContent) as CodexResponseByKind<K>;
     case 'groups':
       return getProviderGroups() as CodexResponseByKind<K>;
     case 'bundle':

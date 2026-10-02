@@ -150,6 +150,10 @@ async function queryRateLimits(): Promise<CodexRateLimitsResult> {
     env: { ...process.env, CODEX_HOME: codexHome(), PATH: childPath },
   });
   const client = new JsonRpcClient(proc);
+  const onExit = () => { try { proc.kill(); } catch {} };
+  process.once('exit', onExit);
+  const deadline = setTimeout(onExit, 29_000);
+  proc.stderr.resume();
   try {
     await client.request('initialize', {
       protocolVersion: '2025-03-26',
@@ -161,6 +165,7 @@ async function queryRateLimits(): Promise<CodexRateLimitsResult> {
   } catch (err) {
     throw toQuotaError(err);
   } finally {
+    clearTimeout(deadline); process.removeListener('exit', onExit);
     client.dispose();
     try { proc.kill('SIGKILL'); } catch { /* already gone */ }
   }
