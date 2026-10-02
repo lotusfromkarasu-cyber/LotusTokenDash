@@ -1,4 +1,4 @@
-// Push verified Git trees through REST when Git HTTPS is unavailable. GitHub normalizes dates to UTC.
+// Push verified Git trees through REST when Git HTTPS is unavailable.
 import { execFileSync } from 'node:child_process';
 const git=process.platform==='win32'?'C:/Program Files/Git/cmd/git.exe':'git';
 const run=(...args)=>execFileSync(git,args,{windowsHide:true});
@@ -32,7 +32,9 @@ for(const sha of commits) {
   const remoteParent=uploaded.get(parent)??parent;
   const commit=await api('/git/commits','POST',{message,tree:createdTree.sha,parents:[remoteParent],author:{name:identity[0],email:identity[1],date:identity[2]},committer:{name:identity[3],email:identity[4],date:identity[5]}});
   const author=commit.author; const committer=commit.committer;
-  const object=`tree ${createdTree.sha}\nparent ${remoteParent}\nauthor ${author.name} <${author.email}> ${Date.parse(author.date)/1000} +0000\ncommitter ${committer.name} <${committer.email}> ${Date.parse(committer.date)/1000} +0000\n\n${message}\n`;
+  const zone=date=>date.endsWith('Z')?'+0000':date.slice(-6).replace(':','');
+  // REST preserves the supplied date's timezone and stores the message without a trailing newline.
+  const object=`tree ${createdTree.sha}\nparent ${remoteParent}\nauthor ${author.name} <${author.email}> ${Date.parse(author.date)/1000} ${zone(identity[2])}\ncommitter ${committer.name} <${committer.email}> ${Date.parse(committer.date)/1000} ${zone(identity[5])}\n\n${message}`;
   const local=execFileSync(git,['hash-object','-t','commit','-w','--stdin'],{input:object,encoding:'utf8',windowsHide:true}).trim();
   if(local!==commit.sha)throw new Error('Git commit verification mismatch');
   uploaded.set(sha,commit.sha);console.log(`Uploaded verified commit ${commit.sha.slice(0,8)}`);
