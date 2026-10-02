@@ -1,4 +1,4 @@
-// Push exact local Git objects through GitHub REST when Git's HTTPS transport is unavailable.
+// Push verified Git trees through REST when Git HTTPS is unavailable. GitHub normalizes dates to UTC.
 import { execFileSync } from 'node:child_process';
 const git=process.platform==='win32'?'C:/Program Files/Git/cmd/git.exe':'git';
 const run=(...args)=>execFileSync(git,args,{windowsHide:true});
@@ -12,6 +12,7 @@ async function api(path,method='GET',body) {
 }
 const remote=await api('/git/ref/heads/main');
 const commits=string('rev-list','--reverse',`${remote.object.sha}..HEAD`).split('\n').filter(Boolean);
+const originalHead=string('rev-parse','HEAD'); const uploaded=new Map();
 for(const sha of commits) {
   const parent=string('rev-parse',`${sha}^`);const parentTree=string('rev-parse',`${parent}^{tree}`);
   const changed=string('diff-tree','--no-commit-id','--name-only','-r','--no-renames',sha).split('\n').filter(Boolean);
@@ -28,8 +29,13 @@ for(const sha of commits) {
   if(createdTree.sha!==string('rev-parse',`${sha}^{tree}`))throw new Error('Tree mismatch');
   const identity=string('show','-s','--format=%an%n%ae%n%aI%n%cn%n%ce%n%cI',sha).split('\n');
   const message=run('show','-s','--format=%B',sha).toString('utf8').trimEnd();
-  const commit=await api('/git/commits','POST',{message,tree:createdTree.sha,parents:[parent],author:{name:identity[0],email:identity[1],date:identity[2]},committer:{name:identity[3],email:identity[4],date:identity[5]}});
-  if(commit.sha!==sha)throw new Error(`Commit mismatch ${commit.sha} != ${sha}`);
-  console.log(`Uploaded exact commit ${sha.slice(0,8)}`);
+  const remoteParent=uploaded.get(parent)??parent;
+  const commit=await api('/git/commits','POST',{message,tree:createdTree.sha,parents:[remoteParent],author:{name:identity[0],email:identity[1],date:identity[2]},committer:{name:identity[3],email:identity[4],date:identity[5]}});
+  const author=commit.author; const committer=commit.committer;
+  const object=`tree ${createdTree.sha}\nparent ${remoteParent}\nauthor ${author.name} <${author.email}> ${Date.parse(author.date)/1000} +0000\ncommitter ${committer.name} <${committer.email}> ${Date.parse(committer.date)/1000} +0000\n\n${message}\n`;
+  const local=execFileSync(git,['hash-object','-t','commit','-w','--stdin'],{input:object,encoding:'utf8',windowsHide:true}).trim();
+  if(local!==commit.sha)throw new Error('Git commit verification mismatch');
+  uploaded.set(sha,commit.sha);console.log(`Uploaded verified commit ${commit.sha.slice(0,8)}`);
 }
-const head=string('rev-parse','HEAD');await api('/git/refs/heads/main','PATCH',{sha:head,force:false});run('update-ref','refs/remotes/origin/main',head);console.log(`main synchronized: ${head}`);
+const head=uploaded.get(originalHead)??originalHead;await api('/git/refs/heads/main','PATCH',{sha:head,force:false});
+run('update-ref','refs/heads/main',head,originalHead);run('update-ref','refs/remotes/origin/main',head);console.log(`main synchronized: ${head}`);
