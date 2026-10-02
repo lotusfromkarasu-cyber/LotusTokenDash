@@ -1,0 +1,6 @@
+{
+  "identifier": "lotus-desktop",
+  "description": "Local HUD and analytics window",
+  "windows": ["hud", "details"],
+  "permissions": ["core:default", "core:window:allow-start-dragging", "core:event:default"]
+}

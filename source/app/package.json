@@ -1,0 +1,46 @@
+{
+  "name": "lotus-token-dash",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "LotusTokenDash desktop analytics",
+  "main": "./dist/server/index.js",
+  "types": "./dist/server/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "node ../../tools/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "open": "^10.1.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^2.15.3",
+    "zod": "^3.24.3",
+    "@tauri-apps/api": "^2.10.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.2",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "vitest": "^4.1.4",
+    "@tauri-apps/cli": "^2.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lotusfromkarasu-cyber/LotusTokenDash.git"
+  },
+  "private": true
+}

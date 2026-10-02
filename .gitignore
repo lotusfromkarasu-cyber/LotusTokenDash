@@ -1,0 +1,14 @@
+build/
+runtime/
+releases/
+source/app/node_modules
+source/app/dist/
+source/app/test-results/
+source/app/playwright-report/
+source/desktop/binaries/
+source/desktop/target/
+source/desktop/resources/
+*.log
+.env
+*.pdb
+.DS_Store

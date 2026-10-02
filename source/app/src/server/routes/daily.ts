@@ -1,0 +1,63 @@
+import { type Request, type Response } from 'express';
+import { cache } from '../cache.js';
+import { validateDaily } from '../../shared/schemas.js';
+import { getCodexDailyResponse } from '../codexResponseService.js';
+import { getDailyResponse as getOpenClawDailyResponse } from '../openclawParser.js';
+import { getDailyResponse as getOpencodeDailyResponse } from '../opencodeParser.js';
+import { getDailyResponse as getClaudeDailyResponse } from '../claudeJsonlParser.js';
+import { getDailyResponse as getPiDailyResponse } from '../piParser.js';
+
+export async function getDaily(req: Request, res: Response): Promise<void> {
+  const agent = req.query.agent as string || 'claude';
+  const force = req.query.refresh === '1' || req.query.refresh === 'true';
+  const cacheKey = `daily:${agent}`;
+  try {
+    if (!force) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
+
+      // Stale-while-revalidate: return stale data, refresh in background
+      const stale = cache.getStale(cacheKey);
+      if (stale) {
+        refreshDailyCache(agent, cacheKey);
+        res.json(stale);
+        return;
+      }
+    }
+
+    const data = await fetchDailyData(agent);
+    cache.set(cacheKey, data);
+    res.json(data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching daily data:', error);
+    res.status(502).json({
+      error: `Failed to fetch daily data from ${agent}`,
+      hint: message,
+    });
+  }
+}
+
+async function fetchDailyData(agent: string) {
+  if (agent === 'codex') {
+    return getCodexDailyResponse();
+  } else if (agent === 'openclaw') {
+    return validateDaily(getOpenClawDailyResponse());
+  } else if (agent === 'opencode') {
+    return validateDaily(getOpencodeDailyResponse());
+  } else if (agent === 'pi') {
+    return validateDaily(getPiDailyResponse());
+  } else {
+    // Claude Code: parse JSONL directly (fast, no CLI)
+    return validateDaily(getClaudeDailyResponse());
+  }
+}
+
+function refreshDailyCache(agent: string, cacheKey: string): void {
+  void fetchDailyData(agent)
+    .then(data => cache.set(cacheKey, data))
+    .catch(err => console.error('Background refresh failed (daily):', err));
+}

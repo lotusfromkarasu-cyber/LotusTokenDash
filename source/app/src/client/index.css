@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+html, body {
+  background-color: #faf9f7 !important;
+}
+
+@theme {
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --color-accent: #4f46e5;
+  --color-accent-dim: #4338ca;
+  --color-surface: #ffffff;
+  --color-surface-raised: #faf9f7;
+  --color-surface-overlay: #f3f2ef;
+  --color-border: #e8e6e1;
+  --color-border-subtle: #f0eeea;
+}
+
+/* Noise texture overlay */
+
+
+/* Recharts theme overrides */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #e7e5e4;
+}
+
+.recharts-text {
+  fill: #78716c;
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.recharts-legend-item-text {
+  color: #57534e;
+  font-size: 12px;
+}
+
+/* Custom tooltip */
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8c4be;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e7e5e4 25%, #d6d3d1 50%, #e7e5e4 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}

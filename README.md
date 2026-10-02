@@ -1,0 +1,29 @@
+# LotusTokenDash
+
+用一扇紧凑的悬浮窗查看 Codex 配额和今日使用量，在独立桌面窗口中打开完整 TokenDash 分析。
+
+## 功能
+
+- 悬浮 HUD：5h / 7day 配额、重置时间、理想使用进度标线、今日 token、缓存命中率。
+- 拖到显示器顶部自动变为细条，悬停展开；可缩放、隐藏到托盘、恢复位置。
+- Codex 官方与各 custom provider 独立分组，HUD 来源可切换。
+- 独立分析窗口保留 TokenDash 的日/月/会话、模型、项目、时段、热力图、会话详情和数据路径设置。
+- 支持 Claude Code / Codex / OpenClaw / OpenCode / Pi，及 Codex / Claude / GLM / MiniMax / Kimi 配额适配器。
+- 色彩来自 `22222B / AF8369 / FFFDD8 / 6F252A / EDEDED`。
+
+## 开发
+
+需要 Node 24、Rust 和对应系统的 Tauri 构建依赖。
+
+```sh
+node tools/tasks.mjs install
+node tools/tasks.mjs test
+node tools/tasks.mjs build
+node tools/tasks.mjs desktop
+```
+
+`source/app/node_modules` 是指向 `runtime/development/node_modules` 的链接。Windows 优先构建；GitHub Actions 可手动选择三平台，也会在版本 tag 时构建三平台。产物位于 `build/rust-target`；本地交付包归档到 `releases/<version>`。
+
+首次运行读取本机的会话目录和 Codex 登录状态。个人会话、登录文件、API token 和使用量索引不会提交到仓库。应用设置独立存放在系统应用数据目录。来源无法确认的历史日志单独展示。
+
+上游与口径说明见 [docs/UPSTREAM.md](docs/UPSTREAM.md)。

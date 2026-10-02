@@ -1,0 +1,67 @@
+name: Desktop build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      all_platforms:
+        description: Build macOS and Linux too
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+          - os: macos-latest
+            bundles: dmg
+          - os: ubuntu-22.04
+            bundles: deb,appimage
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select platforms
+        id: select
+        shell: bash
+        run: |
+          if [[ '${{ matrix.os }}' == 'windows-latest' || '${{ inputs.all_platforms }}' == 'true' || '${{ github.ref_type }}' == 'tag' ]]; then echo 'build=true' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.select.outputs.build == 'true'
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.select.outputs.build == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: steps.select.outputs.build == 'true'
+        with:
+          workspaces: source/desktop -> ../../build/rust-target
+      - name: Linux libraries
+        if: steps.select.outputs.build == 'true' && runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Dependencies
+        if: steps.select.outputs.build == 'true'
+        run: node tools/tasks.mjs install
+      - name: Type and parser tests
+        if: steps.select.outputs.build == 'true'
+        run: node tools/tasks.mjs test
+      - name: Bundle data service
+        if: steps.select.outputs.build == 'true'
+        run: node tools/tasks.mjs build
+      - name: Desktop package
+        if: steps.select.outputs.build == 'true'
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
+        run: node tools/tasks.mjs desktop --bundles ${{ matrix.bundles }}
+      - uses: actions/upload-artifact@v4
+        if: steps.select.outputs.build == 'true'
+        with:
+          name: LotusTokenDash-${{ runner.os }}
+          path: build/rust-target/release/bundle/**/*
+          if-no-files-found: error
