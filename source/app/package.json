@@ -1,6 +1,6 @@
 {
   "name": "lotus-token-dash",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "LotusTokenDash desktop analytics",
   "main": "./dist/server/index.js",

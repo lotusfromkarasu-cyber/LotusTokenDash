@@ -1,4 +1,10 @@
 export const zh: Record<string,string> = {
+  'Show model prices':'查看模型定价', 'Model prices':'模型定价',
+  'Price unavailable':'未公布定价', 'Estimate excludes models without a published price':'费用估算不包含未公布定价的模型',
+  'Current OpenAI Standard prices · All dates · Official and custom':'OpenAI 当前标准单价 · 全部日期 · 官方及 custom',
+  'Long-context requests use the corresponding higher rates':'长上下文请求采用对应的长上下文单价',
+  'Prices checked: {time}':'价格核对时间：{time}', 'Automatic price sync every 7 days':'每 7 天自动同步价格',
+  'Price sync failed; using last verified prices':'价格同步失败，正在使用最近核实的价格',
   'Language':'语言', 'Usage analytics':'使用分析', 'LOCAL USAGE · CLEAR PERSPECTIVE':'本地用量 · 清晰洞察',
   'Auto refresh':'自动刷新', 'Refresh interval':'刷新间隔', 'Manual':'手动', '30 seconds':'30 秒', '{minutes} min':'{minutes} 分钟', 'Every {seconds} seconds':'每 {seconds} 秒自动刷新',
   'Codex source':'Codex 来源', 'Codex data source':'Codex 数据来源', 'Quota settings':'配额设置',

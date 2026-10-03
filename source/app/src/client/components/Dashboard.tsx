@@ -19,14 +19,12 @@ import { shortModelName } from '../utils/modelNames.js';
 import { AnalyticsSection } from './AnalyticsSection.js';
 import { CodexDataSourcesSettings } from './CodexDataSourcesSettings.js';
 import { SessionAnalyticsSection } from './SessionAnalyticsSection.js';
-import type { DailyEntry, MetricMode } from '../../shared/types.js';
+import type { DailyEntry, MetricMode, ModelBreakdown } from '../../shared/types.js';
 
 const C = ['#6F252A', '#AF8369', '#22222B', '#B8AA78', '#7E6B67', '#C09B86', '#945A61', '#7D8270'];
 
 // Model pricing display (USD per 1M tokens) — keep in sync with claudeJsonlParser.ts
 const MODEL_PRICING_DISPLAY: Record<string, { input: string; cache: string; output: string }> = {
-  'gpt-5.5': { input: '5.00', cache: '0.50', output: '30.00' },
-  'gpt-5.4': { input: '2.50', cache: '0.25', output: '15.00' },
   'Opus 4.6': { input: '15.00', cache: '1.50', output: '75.00' },
   'Sonnet 4.6': { input: '3.00', cache: '0.30', output: '15.00' },
   'Sonnet 4.5': { input: '3.00', cache: '0.30', output: '15.00' },
@@ -408,20 +406,21 @@ export function Dashboard() {
   const cacheSavings = useMemo(() => {
     return {
       tokensSaved: totals.cacheReadTokens,
-      costSaved: costSavedByCache(totals.cacheReadTokens),
+      costSaved: agent === 'codex' ? filteredDaily.reduce((sum, day) => sum + day.modelBreakdowns.reduce((n, b) => n + (b.cacheSavingsUSD ?? 0), 0), 0) : costSavedByCache(totals.cacheReadTokens),
       hitRate: cacheHitRate
     };
-  }, [totals.cacheReadTokens, cacheHitRate]);
+  }, [totals.cacheReadTokens, cacheHitRate, filteredDaily, agent]);
 
   // Model aggregation
   const modelAgg = useMemo(() => {
-    const map: Record<string, { tokens: number; cost: number; input: number; output: number; cacheRead: number }> = {};
+    const map: Record<string, { tokens: number; cost: number; input: number; output: number; cacheRead: number; pricing?: ModelBreakdown['pricing'] }> = {};
     for (const d of filteredDaily) {
       const tokenMode = modelTokenMode(d);
       for (const b of d.modelBreakdowns) {
         const name = shortModelName(b.modelName);
         if (!map[name]) map[name] = { tokens: 0, cost: 0, input: 0, output: 0, cacheRead: 0 };
         map[name].tokens += modelBreakdownTokens(b, tokenMode);
+        map[name].pricing = b.pricing;
         map[name].cost += b.cost;
         map[name].input += b.inputTokens;
         map[name].output += b.outputTokens;
@@ -738,13 +737,14 @@ export function Dashboard() {
                 {!isTokens && modelAgg.length > 0 && (
                   <div className="relative">
                     <button
+                      aria-label={t('Show model prices')}
                       onClick={e => { e.stopPropagation(); setShowPricing(v => !v); }}
                       className="w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </button>
                     {showPricing && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-[320px] bg-white rounded-xl shadow-[0_8px_30px_rgba(120,113,108,0.15)] border border-stone-200/60 p-4">
+                      <div role="region" aria-label={t('Model prices')} className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-[380px] max-w-[90vw] bg-white rounded-xl shadow-[0_8px_30px_rgba(120,113,108,0.15)] border border-stone-200/60 p-4">
                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-stone-200/60 rotate-45" />
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">{t("Pricing Formula")}</span>
@@ -752,17 +752,26 @@ export function Dashboard() {
                         <div className="text-[10px] font-mono text-stone-400 bg-stone-50 rounded-lg px-2.5 py-1.5 mb-2.5 leading-relaxed">
                           {t("Cost = (input - cached) x in_price + cached x cache_price + output x out_price")}
                         </div>
+                        {agent === 'codex' && <div className="text-[10px] text-stone-500 mb-2 leading-relaxed">
+                          <p>{t('Current OpenAI Standard prices · All dates · Official and custom')}</p>
+                          <p>{t('Long-context requests use the corresponding higher rates')}</p>
+                          {dailyData.data?.pricing && <>
+                            <p>{t('Prices checked: {time}', { time: new Date(dailyData.data.pricing.checkedAt ?? dailyData.data.pricing.fetchedAt).toLocaleString(locale()) })}</p>
+                            <p>{t('Automatic price sync every 7 days')}</p>
+                            {dailyData.data.pricing.lastError && <p className="text-amber-700">{t('Price sync failed; using last verified prices')}</p>}
+                          </>}
+                        </div>}
                         <div className="text-[10px] text-stone-400 mb-1.5 font-semibold">{t("Per 1M tokens (USD)")}</div>
-                        <div className="space-y-1">
-                          {modelAgg.slice(0, 4).map((m, i) => {
-                            const pricing = MODEL_PRICING_DISPLAY[m.name] || MODEL_PRICING_DISPLAY.default;
+                        <div className="space-y-1 max-h-64 overflow-y-auto">
+                          {modelAgg.map((m, i) => {
+                            const pricing = agent === 'codex' ? (m.pricing ? { input: String(m.pricing.inputPer1M), cache: m.pricing.cachedInputPer1M === null ? '—' : String(m.pricing.cachedInputPer1M), output: String(m.pricing.outputPer1M) } : null) : MODEL_PRICING_DISPLAY[m.name] || MODEL_PRICING_DISPLAY.default;
                             return (
                               <div key={m.name} className="flex items-center gap-1.5 text-[10px]">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: C[i % C.length] }} />
-                                <span className="font-semibold text-stone-600 w-20 truncate">{m.name}</span>
-                                <span className="text-stone-400 font-mono">{t("in $")}{pricing.input}</span>
+                                <span className="font-semibold text-stone-600 w-28 truncate">{m.name}</span>
+                                {pricing ? <><span className="text-stone-400 font-mono">{t("in $")}{pricing.input}</span>
                                 <span className="text-emerald-500 font-mono">{t("ca $")}{pricing.cache}</span>
-                                <span className="text-stone-400 font-mono">{t("out $")}{pricing.output}</span>
+                                <span className="text-stone-400 font-mono">{t("out $")}{pricing.output}</span></> : <span className="text-amber-700">{t("Price unavailable")}</span>}
                               </div>
                             );
                           })}
@@ -777,6 +786,7 @@ export function Dashboard() {
         </div>
       </div>
 
+      {agent === 'codex' && modelAgg.some(m => m.pricing === null) && <p className="text-xs text-amber-700">{t('Estimate excludes models without a published price')}</p>}
       {metric === 'sessions' ? (
         <SessionAnalyticsSection key={`${agent}:${project}:${timeRange}`} agent={agent} project={project} range={timeRange} refreshVersion={sessionRefreshVersion} />
       ) : <>

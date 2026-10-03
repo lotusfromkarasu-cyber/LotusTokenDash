@@ -3,9 +3,10 @@ import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCodexBlocksResponse, getCodexDailyResponse, resolveCodexWorkerPath } from '../../server/codexResponseService.js';
+import { closeCodexWorker, getCodexBlocksResponse, getCodexDailyResponse, resolveCodexWorkerPath } from '../../server/codexResponseService.js';
 import { cache } from '../../server/cache.js';
 import { clearUsageFileIndexMemory } from '../../server/usageFileIndex.js';
+import { getPricingStore, setWorkerPricing } from '../../server/pricingStore.js';
 
 const tempDirs: string[] = [];
 const originalCodexHome = process.env.CODEX_HOME;
@@ -60,6 +61,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  closeCodexWorker();
   cache.clear();
   clearUsageFileIndexMemory();
   if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
@@ -77,6 +79,16 @@ afterEach(() => {
 });
 
 describe('codex response worker', () => {
+  it('reprices a cached default bundle when the catalogue changes', async () => {
+    const original = structuredClone(getPricingStore().snapshot);
+    try {
+      const first = await getCodexDailyResponse();
+      setWorkerPricing({ ...original, models: { ...original.models, 'gpt-5.5': { ...original.models['gpt-5.5'], inputPer1M: 10 } } });
+      const second = await getCodexDailyResponse();
+      expect(second.totals.totalTokens).toBe(first.totals.totalTokens);
+      expect(second.totals.totalCost - first.totals.totalCost).toBeCloseTo(165 * 5 / 1_000_000, 8);
+    } finally { setWorkerPricing(original); }
+  });
   it('computes Codex usage through the non-blocking response service', async () => {
     const daily = await getCodexDailyResponse({ timezone: 'UTC' });
 

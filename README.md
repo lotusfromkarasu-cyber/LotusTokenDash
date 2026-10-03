@@ -27,6 +27,12 @@ HUD 和顶部细条直接显示官方 5h / 7d 重置时间，格式为本机时�
 - 支持 Claude Code / Codex / OpenClaw / OpenCode / Pi，及 Codex / Claude / GLM / MiniMax / Kimi 配额适配器。
 - 色彩来自 `22222B / AF8369 / FFFDD8 / 6F252A / EDEDED`。
 
+## 模型费用与价格同步
+
+Codex 金额使用 OpenAI 当前 Standard 单价估算，官方和 custom 中的 OpenAI 模型采用相同单价、独立统计。所有日期按当前价格计算。后台每 7 天直接读取官方定价数据，关闭期间到期则下次启动补查；断网保留最近核实价格。同步不调用大模型，也不消耗 Codex 对话额度。
+
+价格与程序逻辑分开存储，金额汇总、缓存节省和模型定价说明共用同一份数据。详细来源与运行方式见 [docs/PRICING.md](docs/PRICING.md)。
+
 ## 开发
 
 需要 Node 24、Rust 和对应系统的 Tauri 构建依赖。

@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const ModelBreakdownSchema = z.object({
   modelName: z.string(),
+  pricing: z.object({inputPer1M:z.number(),cachedInputPer1M:z.number().nullable(),outputPer1M:z.number(),longContextInputPer1M:z.number().optional(),longContextCachedInputPer1M:z.number().nullable().optional(),longContextOutputPer1M:z.number().optional()}).nullable().optional(),
+  cacheSavingsUSD: z.number().optional(),
   inputTokens: z.number().default(0),
   outputTokens: z.number().default(0),
   cacheCreationTokens: z.number().default(0),

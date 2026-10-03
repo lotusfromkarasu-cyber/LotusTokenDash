@@ -2,7 +2,8 @@ import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import type { DailyEntry, DailyResponse, ProjectsResponse, BlockEntry, BlocksResponse, ModelBreakdown } from '../shared/types.js';
-import { calculateCost, isLongContextCodexRequest, normalizeCodexModelName } from './codexPricing.js';
+import { getPricingStore, getPricingRevision } from './pricingStore.js';
+import { calculateCost, calculateCacheSavings, getModelPricing, isLongContextCodexRequest, normalizeCodexModelName } from './codexPricing.js';
 import { type BlockGranularity } from './claudeJsonlParser.js';
 import { buildUsageFileIndex } from './usageFileIndex.js';
 import { getCodexSessionDirs, isCodexSessionDirAccessible } from './codexDataSources.js';
@@ -451,13 +452,13 @@ export function deduplicateParsedSessions(sessions: ParsedSession[]): ParsedSess
 function loadIndexedSessions(scoped = true): { sessions: ParsedSession[]; signature: string } {
   const result = buildUsageFileIndex<ParsedSession | null, { path: string }>({
     cacheName: 'codex-sessions',
-    parserVersion: CODEX_INDEX_VERSION,
+    parserVersion: `${CODEX_INDEX_VERSION}-current-prices:${getPricingStore().snapshot.longContextThreshold}`,
     files: scanCodexSessions().map(path => ({ path })),
     parseFile: file => parseCodexSession(file.path),
   });
   return {
     sessions: selectProvider(deduplicateParsedSessions(result.values.filter((session): session is ParsedSession => session !== null)), scoped ? currentProvider() : null),
-    signature: `${scoped ? currentProvider() ?? 'upstream' : 'all'}:${result.signature}`,
+    signature: `${getPricingRevision()}:${scoped ? currentProvider() ?? 'upstream' : 'all'}:${result.signature}`,
   };
 }
 
@@ -682,6 +683,8 @@ function buildModelBreakdowns(modelAccs: Map<string, TokenAccumulator>): ModelBr
       cacheCreationTokens: 0,
       cacheReadTokens: display.cachedInputTokens,
       cost: calculateCost(acc, new Set([modelName])),
+      pricing: getModelPricing(modelName) ?? null,
+      cacheSavingsUSD: calculateCacheSavings(acc, modelName),
     };
   });
 }

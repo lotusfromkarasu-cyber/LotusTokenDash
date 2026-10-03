@@ -1,4 +1,5 @@
 import express from 'express';
+import { startPricingSync } from './pricingStore.js';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -17,6 +18,7 @@ process.env.LOTUS_DATA_DIR = dataDir;
 process.env.TOKENDASH_SETTINGS_FILE = join(dataDir, 'settings.json');
 process.env.TOKENDASH_USAGE_INDEX_DIR = join(dataDir, 'usage-index');
 process.env.LOTUS_WORKER_FILE = join(here, 'worker.mjs');
+const stopPricingSync = startPricingSync();
 const token = randomBytes(32).toString('hex');
 const app = express();
 app.disable('x-powered-by');
@@ -78,7 +80,7 @@ const server = app.listen(0, '127.0.0.1', () => {
   const address = server.address();
   if (address && typeof address !== 'string') process.stdout.write(JSON.stringify({ port: address.port, token }) + '\n');
 });
-function shutdown() { server.close(); closeCodexWorker(); process.exit(0); }
+function shutdown() { stopPricingSync(); server.close(); closeCodexWorker(); process.exit(0); }
 process.stdin.resume();
 process.stdin.on('end', shutdown);
 process.on('SIGTERM', shutdown);

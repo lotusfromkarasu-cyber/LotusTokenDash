@@ -9,6 +9,7 @@ import { getSessionAnalyticsRoute, getSessionDetailRoute } from './sessionAnalyt
 import { detectAvailableAgents } from '../agentDetection.js';
 import { quotaService } from '../quota/index.js';
 import type { QuotaProviderId } from '../quota/index.js';
+import { getPricingStatus } from '../pricingStore.js';
 import { cache } from '../cache.js';
 import { getCodexDataPathStatuses, getCustomCodexDataPaths, getEnvironmentCodexDataPaths, getOfficialCodexDataPaths } from '../codexDataSources.js';
 import { updateCodexCustomDataPaths } from '../appSettings.js';
@@ -124,6 +125,7 @@ function getAppInfo(info: AppInfo): (_req: Request, res: Response) => void {
 }
 
 export function registerApiRoutes(router: Router, appInfo: AppInfo): void {
+  router.get('/pricing', (_req, res) => res.json(getPricingStatus()));
   router.get('/app-info', getAppInfo(appInfo));
   router.get('/agents', getAgents);
   router.get('/settings', getSettings);

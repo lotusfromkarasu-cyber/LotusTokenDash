@@ -14,6 +14,7 @@ import type {
 import { calculateCost as calculateClaudeCost, extractProjectName } from './claudeJsonlParser.js';
 import { parseAllSessions, scanCodexSessions, type ParsedSession } from './codexParser.js';
 import { scopeKey, currentProvider, providerId } from './providerScope.js';
+import { getPricingRevision } from './pricingStore.js';
 import { calculateCost as calculateCodexCost } from './codexPricing.js';
 
 export type SessionAnalyticsRange = 'today' | '7d' | '30d' | '60d' | 'all';
@@ -353,7 +354,7 @@ function claudeFiles(): string[] {
 
 /** A revision is source metadata only; neither contents nor paths are sent to clients. */
 export function getSessionAnalyticsSourceRevision(agent: string): string {
-  if (agent === 'codex') return scopeKey(sourceSignature(scanCodexSessions()));
+  if (agent === 'codex') return scopeKey(`${getPricingRevision()}:${sourceSignature(scanCodexSessions())}`);
   if (agent === 'claude') return sourceSignature(claudeFiles());
   return 'unsupported';
 }

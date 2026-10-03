@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { getPricingRevision } from './pricingStore.js';
 import { scopeKey } from './providerScope.js';
 
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes (fresh)
@@ -24,7 +25,7 @@ class Cache {
   private store = new Map<string, CacheEntry<unknown>>();
 
   get<T>(key: string): T | null {
-    key = scopeKey(key);
+    key = scopeKey(`${getPricingRevision()}:${key}`);
     const entry = this.store.get(key);
     if (entry && Date.now() <= entry.expiresAt) {
       return entry.data as T;
@@ -34,7 +35,7 @@ class Cache {
 
   /** Get data even if stale (for stale-while-revalidate) */
   getStale<T>(key: string): T | null {
-    key = scopeKey(key);
+    key = scopeKey(`${getPricingRevision()}:${key}`);
     // Try memory first
     const entry = this.store.get(key);
     if (entry) return entry.data as T;
@@ -44,7 +45,7 @@ class Cache {
   }
 
   set<T>(key: string, data: T, ttl: number = DEFAULT_TTL): void {
-    key = scopeKey(key);
+    key = scopeKey(`${getPricingRevision()}:${key}`);
     const entry: CacheEntry<T> = {
       data,
       expiresAt: Date.now() + ttl,
@@ -64,12 +65,12 @@ class Cache {
   }
 
   delete(key: string): boolean {
-    key = scopeKey(key);
+    key = scopeKey(`${getPricingRevision()}:${key}`);
     return this.store.delete(key);
   }
 
   has(key: string): boolean {
-    key = scopeKey(key);
+    key = scopeKey(`${getPricingRevision()}:${key}`);
     const entry = this.store.get(key);
     if (!entry) return false;
     if (Date.now() > entry.expiresAt) {

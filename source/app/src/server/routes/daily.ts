@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import { getPricingStatus } from '../pricingStore.js';
 import { cache } from '../cache.js';
 import { validateDaily } from '../../shared/schemas.js';
 import { getCodexDailyResponse } from '../codexResponseService.js';
@@ -43,7 +44,7 @@ export async function getDaily(req: Request, res: Response): Promise<void> {
 
 async function fetchDailyData(agent: string) {
   if (agent === 'codex') {
-    return getCodexDailyResponse();
+    return { ...await getCodexDailyResponse(), pricing: getPricingStatus() };
   } else if (agent === 'openclaw') {
     return validateDaily(getOpenClawDailyResponse());
   } else if (agent === 'opencode') {

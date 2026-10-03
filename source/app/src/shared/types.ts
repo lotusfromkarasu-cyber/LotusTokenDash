@@ -1,5 +1,13 @@
+import type { ModelPricing } from './pricing.js';
+
+export interface PricingStatus {
+  source: string; fetchedAt: string; checkedAt: string | null; nextCheckAt: string; lastError: string | null; revision: string;
+}
+
 export interface ModelBreakdown {
   modelName: string;
+  pricing?: ModelPricing | null;
+  cacheSavingsUSD?: number;
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
@@ -29,6 +37,7 @@ export interface Totals {
 }
 
 export interface DailyResponse {
+  pricing?: PricingStatus;
   daily: DailyEntry[];
   totals: Totals;
 }

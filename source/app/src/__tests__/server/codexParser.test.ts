@@ -523,8 +523,8 @@ describe('Codex pricing', () => {
       totalTokens: 2_000_000,
     };
 
-    expect(calculateCost(tokens, new Set(['gpt-5.6']))).toBeCloseTo(32.75, 6);
-    expect(calculateCost(tokens, new Set(['gpt-5.6-sol-2026-07-15']))).toBeCloseTo(32.75, 6);
+    expect(calculateCost(tokens, new Set(['gpt-5.6']))).toBeCloseTo(22.2, 6);
+    expect(calculateCost(tokens, new Set(['gpt-5.6-sol-2026-07-15']))).toBeCloseTo(22.2, 6);
   });
 
   it('applies GPT-5.6 long-context rates to the individual request portion', () => {
@@ -539,6 +539,6 @@ describe('Codex pricing', () => {
       longContextOutputTokens: 500,
     };
 
-    expect(calculateCost(tokens, new Set(['gpt-5.6-sol']))).toBeCloseTo(2.9265, 6);
+    expect(calculateCost(tokens, new Set(['gpt-5.6-sol']))).toBeCloseTo(2.337, 6);
   });
 });
