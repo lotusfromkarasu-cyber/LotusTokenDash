@@ -49,3 +49,12 @@
 - 类型检查与 199 项单元测试通过；13 项相关界面检查通过。新增用例验证上海／洛杉矶本地日期、跨日、用量／余量不改时间、缺失与无效时间、刷新后更新时间，以及两种模式下 75%／100%／150% 缩放时各项不重叠。
 - 已查看中英文 HUD 与细条渲染截图。未使用 Computer Use。
 - 源码 `3d59944f1780de0a396e75c8c34e85d573fb6c1d` 的 [Windows 构建与打包原生验收](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/37036525323)通过。本机安装到 `K:/App/TOOL/LotusTokenDash` 的 v0.1.4 通过两次冷启动，以及渲染、唯一分析窗口、刷新、重新吸附和拖动／悬停恢复场景。测试窗口隐藏，物理鼠标操作仍由用户检查。
+
+# v0.1.5 当前价格与每周同步
+
+- [官方定价 Markdown](https://developers.openai.com/api/docs/pricing.md) 的 Standard 表生成独立 JSON 价格数据，覆盖 40 个模型、当前全部 8 个 Codex 模型；不使用单价代码常量或未知模型默认价。
+- 官方／custom 的 OpenAI 模型使用同一价格目录，来源分别统计；历史按当前价格计算。后台每 7 天条件请求，关闭期间到期下次启动补查，失败保留最近核实价格并次日重试。公开 HTTPS 请求，无 API key 或模型调用。
+- 费用汇总、项目／时段／会话、缓存节省和说明使用统一价格；主线程、Worker、HTTP 和源缓存均按价格版本失效。同步期间已启动的计算不会将旧费用写入新版缓存。
+- 214 项单元测试和前后端类型检查通过；3 项定价界面检查通过，验证 8 个模型不同价格、未知模型提示和中英文说明。打包后台检查验证官方／custom 单价和缓存节省一致，真实官方 HTTPS 价格核对通过。
+- 源码 4b60fa3abca3544472a31abedacf715a08a4d6fd 的 [Windows 构建与打包原生验收](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/37109549411) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.5 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
+- 发布目录分开存放安装包、免安装包、构建来源和校验文件，保留旧版及用户设置。
