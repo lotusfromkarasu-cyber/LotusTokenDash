@@ -65,4 +65,4 @@
 - 217 项单元测试和前后端类型检查通过；新增 3 项用例覆盖别名解析、两条外部模型单价与费用、以及每周同步替换目录后的覆盖保留。
 - 打包服务检查（bundled worker、API authorization、parallel provider isolation、today hit rates、daily/projects/blocks/session analytics）通过。
 - 价格来源：DeepSeek 官方定价页（峰时／低谷），Qwen3.8-Flash-Next 列表价与 2026-10-12 第三方核对一致。
-- 源码 SOURCE_SHA 的 [Windows 构建与打包原生验收](RUN_URL) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.6 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
+- 源码 368dd788ad36cd7735387cb53beefd7bdf2152d2 的 [Windows 构建与打包原生验收](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/38262492739) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.6 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
