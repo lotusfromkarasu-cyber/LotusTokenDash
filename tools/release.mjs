@@ -1,4 +1,4 @@
-// Publish a version already verified by CI. Credentials stay in Git Credential Manager.
+// Publish a version already verified by CI; re-runs only upload missing assets. Credentials stay in Git Credential Manager.
 import './network.mjs';
 import { execFileSync } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
@@ -12,13 +12,21 @@ const fields=Object.fromEntries(raw.trim().split(/\r?\n/).map(line=>{const i=lin
 const headers={Authorization:`Bearer ${fields.password}`,Accept:'application/vnd.github+json'};
 const body={tag_name:version,target_commitish:commit,name:`LotusTokenDash ${version} — Windows`,draft:false,prerelease:false,body:await readFile(notesFile,'utf8')};
 const response=await fetch('https://api.github.com/repos/lotusfromkarasu-cyber/LotusTokenDash/releases',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(60_000)});
-if(!response.ok)throw new Error(`Release ${response.status}: ${await response.text()}`);
-const release=await response.json();
+let release;
+if(response.ok) release=await response.json();
+else if(response.status===422) {
+  const existing=await fetch(`https://api.github.com/repos/lotusfromkarasu-cyber/LotusTokenDash/releases/tags/${version}`,{headers,signal:AbortSignal.timeout(60_000)});
+  if(!existing.ok) throw new Error(`Release ${response.status}: ${await response.text()}`);
+  release=await existing.json();
+  console.log(`Release ${version} already exists; uploading missing assets`);
+} else throw new Error(`Release ${response.status}: ${await response.text()}`);
+const uploaded=new Set((release.assets??[]).map(asset=>asset.name));
 for(const name of await readdir(directory)) {
   if(!/\.(exe|zip|txt)$/.test(name))continue;
+  if(uploaded.has(name)){console.log(`Skipped ${name} (already on the release)`);continue;}
   const data=await readFile(join(directory,name));
   const url=release.upload_url.replace(/\{.*$/,'')+`?name=${encodeURIComponent(name)}`;
-  const result=await fetch(url,{method:'POST',headers:{...headers,'Content-Type':'application/octet-stream','Content-Length':String(data.length)},body:data,signal:AbortSignal.timeout(120_000)});
+  const result=await fetch(url,{method:'POST',headers:{...headers,'Content-Type':'application/octet-stream'},body:data,signal:AbortSignal.timeout(120_000)});
   if(!result.ok)throw new Error(`Upload ${name}: ${result.status}`);
   console.log(`Published ${name}`);
 }
