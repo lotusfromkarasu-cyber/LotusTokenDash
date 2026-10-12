@@ -40,6 +40,18 @@ describe('Official price catalogue', () => {
     expect(getModelPricing('not-an-openai-model')).toBeUndefined();
     expect(calculateCost(tokens, new Set(['not-an-openai-model']))).toBe(0);
   });
+  it('bills ecnu-max as DeepSeek-V4.1-Flash peak rates', () => {
+    const snapshot = new PricingStore().snapshot;
+    expect(resolvePricedModel('ecnu-max', snapshot)).toBe('deepseek-v4.1-flash');
+    expect(getModelPricing('ecnu-max')).toEqual({ inputPer1M: 0.3, cachedInputPer1M: 0.006, outputPer1M: 1.2 });
+    expect(calculateCost(tokens, new Set(['ecnu-max']))).toBeCloseTo(1.353, 8);
+  });
+  it('bills ecnu-plus as Qwen3.8-Flash-Next rates', () => {
+    const snapshot = new PricingStore().snapshot;
+    expect(resolvePricedModel('ecnu-plus', snapshot)).toBe('qwen3.8-flash-next');
+    expect(getModelPricing('ecnu-plus')).toEqual({ inputPer1M: 0.12, cachedInputPer1M: 0.01, outputPer1M: 0.4 });
+    expect(calculateCost(tokens, new Set(['ecnu-plus']))).toBeCloseTo(0.465, 8);
+  });
 });
 
 describe('Weekly background sync', () => {
@@ -65,6 +77,16 @@ describe('Weekly background sync', () => {
       expect(Date.parse(restarted.snapshot.checkedAt!)).toBe(now);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
+  it('keeps custom ecnu prices and aliases after a sync replaces the catalogue', async () => {
+    const request = vi.fn().mockResolvedValueOnce(new Response(markdown(), { headers: { etag: '"custom"' } }));
+    const store = new PricingStore(undefined, request, () => Date.parse('2026-10-20T08:00:00Z'));
+    expect(store.snapshot.models['deepseek-v4.1-flash']).toBeDefined();
+    await store.sync();
+    expect(store.snapshot.models['deepseek-v4.1-flash'].outputPer1M).toBe(1.2);
+    expect(store.snapshot.models['qwen3.8-flash-next'].cachedInputPer1M).toBe(0.01);
+    expect(resolvePricedModel('ecnu-max', store.snapshot)).toBe('deepseek-v4.1-flash');
+    expect(resolvePricedModel('ecnu-plus', store.snapshot)).toBe('qwen3.8-flash-next');
+  });
   it('retains the previous price set when offline, malformed, or HTTP fails', async () => {
     const request = vi.fn().mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(new Response('broken Markdown'))
@@ -86,3 +108,4 @@ describe('Weekly background sync', () => {
     } finally { setWorkerPricing(original); }
   });
 });
+

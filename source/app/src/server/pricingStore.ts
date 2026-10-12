@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import seed from '../data/openai-prices.json' with { type: 'json' };
 import { OPENAI_PRICING_URL, PRICING_SYNC_INTERVAL_MS, parseOpenAIPrices, type PricingSnapshot } from '../shared/pricing.js';
+import { withCustomPricing } from '../data/custom-prices.js';
 
 function validate(value: unknown): PricingSnapshot {
   const data = value as PricingSnapshot;
@@ -51,9 +52,9 @@ export class PricingStore {
   lastError: string | null = null;
   private pending?: Promise<PricingSnapshot>;
   constructor(private path?: string, private request: typeof download = download, private now = Date.now) {
-    this.snapshot = structuredClone(validate(seed));
+    this.snapshot = withCustomPricing(structuredClone(validate(seed)));
     if (path) {
-      try { this.snapshot = validate(JSON.parse(readFileSync(path, 'utf8'))); } catch { /* Bundled official snapshot supports offline first launch. */ }
+      try { this.snapshot = withCustomPricing(validate(JSON.parse(readFileSync(path, 'utf8')))); } catch { /* Bundled official snapshot supports offline first launch. */ }
     }
   }
   get revision(): string {
@@ -79,7 +80,7 @@ export class PricingStore {
         const parsed = parseOpenAIPrices(body);
         next = { ...this.snapshot, ...parsed, fetchedAt: checkedAt, checkedAt, etag: response.headers.get('etag') ?? undefined };
       }
-      validate(next);
+      next = withCustomPricing(validate(next));
       if (this.path) {
         mkdirSync(dirname(this.path), { recursive: true });
         writeFileSync(`${this.path}.tmp`, JSON.stringify(next, null, 2), 'utf8');
@@ -102,7 +103,7 @@ export function getPricingStatus() {
   const { source, fetchedAt, checkedAt } = store.snapshot;
   return { source, fetchedAt, checkedAt, nextCheckAt: store.nextCheckAt, lastError: store.lastError, revision: store.revision };
 }
-export function setWorkerPricing(snapshot: PricingSnapshot): void { getPricingStore().snapshot = validate(snapshot); }
+export function setWorkerPricing(snapshot: PricingSnapshot): void { getPricingStore().snapshot = withCustomPricing(validate(snapshot)); }
 export function startPricingSync(): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -118,3 +119,4 @@ export function startPricingSync(): () => void {
   void run();
   return () => { stopped = true; if (timer) clearTimeout(timer); };
 }
+

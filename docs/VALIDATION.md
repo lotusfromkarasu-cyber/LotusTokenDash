@@ -58,3 +58,11 @@
 - 214 项单元测试和前后端类型检查通过；3 项定价界面检查通过，验证 8 个模型不同价格、未知模型提示和中英文说明。打包后台检查验证官方／custom 单价和缓存节省一致，真实官方 HTTPS 价格核对通过。
 - 源码 4b60fa3abca3544472a31abedacf715a08a4d6fd 的 [Windows 构建与打包原生验收](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/37109549411) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.5 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
 - 发布目录分开存放安装包、免安装包、构建来源和校验文件，保留旧版及用户设置。
+
+# v0.1.6 外部模型价格
+
+- `ecnu-max` / `ecnu-plus` 的本地价格覆盖层独立于官方定价目录，启动加载与每周同步后统一重新应用；官方模型价格、同步节奏与来源分组不受影响。
+- 217 项单元测试和前后端类型检查通过；新增 3 项用例覆盖别名解析、两条外部模型单价与费用、以及每周同步替换目录后的覆盖保留。
+- 打包服务检查（bundled worker、API authorization、parallel provider isolation、today hit rates、daily/projects/blocks/session analytics）通过。
+- 价格来源：DeepSeek 官方定价页（峰时／低谷），Qwen3.8-Flash-Next 列表价与 2026-10-12 第三方核对一致。
+- 源码 SOURCE_SHA 的 [Windows 构建与打包原生验收](RUN_URL) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.6 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
