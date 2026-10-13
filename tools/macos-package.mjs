@@ -16,7 +16,7 @@ run('ditto', [arm, app]);
 for (const name of ['lotus-token-dash', 'lotus-node']) {
   const relative = `Contents/MacOS/${name}`;
   run('lipo', ['-create', join(arm, relative), join(intel, relative), '-output', join(app, relative)]);
-  run('lipo', ['-verify_arch', 'arm64', 'x86_64', join(app, relative)]);
+  run('lipo', [join(app, relative), '-verify_arch', 'arm64', 'x86_64']);
   run('codesign', ['--force', '--sign', '-', join(app, relative)]);
 }
 const resources = 'Contents/Resources/service';
