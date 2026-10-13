@@ -42,6 +42,7 @@ jobs:
         with:
           workspaces: source/desktop -> ../../build/rust-target
           key: macos-${{ matrix.arch }}
+          cache-on-failure: true
       - name: Dependencies
         run: node tools/tasks.mjs install
       - name: Type and data tests
@@ -56,7 +57,9 @@ jobs:
         run: node tools/smoke.mjs 2>&1 | tee build/macos-evidence/service.log
       - name: Native Mac app
         shell: bash
-        run: node tools/tasks.mjs desktop --bundles app --target ${{ matrix.target }} -- --locked 2>&1 | tee build/macos-evidence/compile.log
+        run: |
+          node tools/tasks.mjs desktop --bundles app --target ${{ matrix.target }} 2>&1 | tee build/macos-evidence/compile.log
+          cp source/desktop/Cargo.lock build/macos-evidence/Cargo.lock
       - name: Native cold launches and IPC checks
         shell: bash
         run: |
