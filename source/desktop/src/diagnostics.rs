@@ -56,18 +56,20 @@ pub fn run(app:tauri::AppHandle) {
                 if result.layout.mode!="strip" {return Err("Stale drag undid top docking".into());}
             }
             super::set_layout(app.clone(),"hud".into(),false,1.0).await?;
-            // Drive the real renderer/IPC drag lifecycle with a blocked move
-            // reply, without moving the physical mouse or showing test windows.
-            hud.eval("const nativeInvoke=window.__TAURI_INTERNALS__.invoke;window.__TAURI_INTERNALS__.invoke=(command,args)=>command==='plugin:window|start_dragging'?new Promise(()=>{}):nativeInvoke(command,args)").map_err(|e|e.to_string())?;
+            // macOS reports completion through the move reply; Windows uses
+            // physical button release independently of that reply.
+            let move_reply=if cfg!(windows) {"new Promise(()=>{})"} else {"Promise.resolve()"};
+            hud.eval(&format!("const nativeInvoke=window.__TAURI_INTERNALS__.invoke;window.__TAURI_INTERNALS__.invoke=(command,args)=>command==='plugin:window|start_dragging'?{move_reply}:nativeInvoke(command,args)")).map_err(|e|e.to_string())?;
             for round in 1..=2 {
                 super::set_layout(app.clone(),if round==1 {"hud"} else {"strip"}.into(),false,1.0).await?;
                 let position=hud.outer_position().map_err(|e|e.to_string())?;
                 let monitor=hud.current_monitor().map_err(|e|e.to_string())?.ok_or("Monitor unavailable")?;
-                hud.set_position(tauri::PhysicalPosition::new(position.x,monitor.position().y)).map_err(|e|e.to_string())?;
+                hud.set_position(tauri::PhysicalPosition::new(position.x,super::dock_top(&monitor))).map_err(|e|e.to_string())?;
                 hud.eval("document.querySelector('.hud').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:1}))").map_err(|e|e.to_string())?;
                 wait(&app,"hud","drag-settled",round).await?;
                 let snapshot=super::layout_state(app.state::<super::Service>());
                 if snapshot.layout.mode!="strip" {return Err("Renderer drag did not dock".into());}
+                if hud.outer_position().map_err(|e|e.to_string())?.y < super::dock_top(&monitor) {return Err("Docked bar overlapped the menu bar".into());}
                 use tauri::Emitter;
                 app.emit_to("hud","lotus-hover",serde_json::json!({"inside":true,"revision":snapshot.revision})).map_err(|e|e.to_string())?;
                 hud.eval("(()=>{const opening=setInterval(()=>{if(document.querySelector('.hud.docked:not(.thin)')){clearInterval(opening);window.__TAURI_INTERNALS__.invoke('renderer_status',{stage:'hover-expanded'});}},50);})()").map_err(|e|e.to_string())?;

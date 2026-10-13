@@ -1,93 +1,111 @@
-name: Desktop build
+name: LotusTokenDash macOS build
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       all_platforms:
-        description: Build macOS and Linux too
+        description: Build both Mac architectures
         type: boolean
-        default: false
+        default: true
 permissions:
   contents: read
+env:
+  MACOSX_DEPLOYMENT_TARGET: '13.5'
+  LOTUS_BASE_COMMIT: '7fe3621dfb7f7de412f4f0f20cfa41165e442b89'
 jobs:
-  desktop:
+  native:
+    name: macOS ${{ matrix.arch }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            bundles: nsis
-          - os: macos-latest
-            bundles: dmg
-          - os: ubuntu-22.04
-            bundles: deb,appimage
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+          - os: macos-15
+            arch: arm64
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            arch: x64
+            target: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
     steps:
       - uses: actions/checkout@v4
-      - name: Select platforms
-        id: select
-        shell: bash
-        run: |
-          if [[ '${{ matrix.os }}' == 'windows-latest' || '${{ inputs.all_platforms }}' == 'true' || '${{ github.ref_type }}' == 'tag' ]]; then echo 'build=true' >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v4
-        if: steps.select.outputs.build == 'true'
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: source/app/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.select.outputs.build == 'true'
+        with:
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
-        if: steps.select.outputs.build == 'true'
         with:
           workspaces: source/desktop -> ../../build/rust-target
-      - name: Linux libraries
-        if: steps.select.outputs.build == 'true' && runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          key: macos-${{ matrix.arch }}
       - name: Dependencies
-        if: steps.select.outputs.build == 'true'
         run: node tools/tasks.mjs install
-      - name: Type and parser tests
-        if: steps.select.outputs.build == 'true'
-        run: node tools/tasks.mjs test
-      - name: Bundle data service
-        if: steps.select.outputs.build == 'true'
-        run: node tools/tasks.mjs build
-      - name: Desktop package
-        if: steps.select.outputs.build == 'true'
-        run: node tools/smoke.mjs
-      - name: Native desktop package
-        if: steps.select.outputs.build == 'true'
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
-        run: node tools/tasks.mjs desktop --bundles ${{ matrix.bundles }}
-      - uses: actions/upload-artifact@v4
-        if: steps.select.outputs.build == 'true'
-        with:
-          name: LotusTokenDash-${{ runner.os }}
-          path: build/rust-target/release/bundle/**/*
-          if-no-files-found: error
-      - name: Windows portable archive
-        if: steps.select.outputs.build == 'true' && runner.os == 'Windows'
-        shell: pwsh
+      - name: Type and data tests
+        shell: bash
         run: |
-          $portable = Join-Path $env:GITHUB_WORKSPACE 'build/portable/LotusTokenDash'
-          New-Item -ItemType Directory -Path $portable -Force | Out-Null
-          Copy-Item 'build/rust-target/release/lotus-token-dash.exe' (Join-Path $portable 'LotusTokenDash.exe')
-          Copy-Item 'runtime/desktop/lotus-node-x86_64-pc-windows-msvc.exe' (Join-Path $portable 'lotus-node.exe')
-          Copy-Item 'build/service' $portable -Recurse
-          Copy-Item 'LICENSE','README.md' $portable
-          node tools/native-smoke.mjs (Join-Path $portable 'LotusTokenDash.exe')
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.6-Windows-x64-portable.zip'
+          mkdir -p build/macos-evidence
+          node tools/tasks.mjs test 2>&1 | tee build/macos-evidence/tests.log
+      - name: Frontend and embedded data service
+        run: node tools/tasks.mjs build
+      - name: Packaged service checks
+        shell: bash
+        run: node tools/smoke.mjs 2>&1 | tee build/macos-evidence/service.log
+      - name: Native Mac app
+        shell: bash
+        run: node tools/tasks.mjs desktop --bundles app --target ${{ matrix.target }} -- --locked 2>&1 | tee build/macos-evidence/compile.log
+      - name: Native cold launches and IPC checks
+        shell: bash
+        run: |
+          app='build/rust-target/${{ matrix.target }}/release/bundle/macos/LotusTokenDash.app'
+          node tools/native-smoke.mjs "$app/Contents/MacOS/lotus-token-dash" 2>&1 | tee build/macos-evidence/native.log
+          codesign --verify --deep --strict --verbose=2 "$app"
+          file "$app/Contents/MacOS/lotus-token-dash" "$app/Contents/MacOS/lotus-node" | tee build/macos-evidence/architecture.txt
+          otool -l "$app/Contents/MacOS/lotus-node" > build/macos-evidence/node-load-commands.txt
+          node --version > build/macos-evidence/node-version.txt
+          tar -czf build/macos-${{ matrix.arch }}.tar.gz -C "$(dirname "$app")" LotusTokenDash.app
       - uses: actions/upload-artifact@v4
-        if: steps.select.outputs.build == 'true' && runner.os == 'Windows'
         with:
-          name: LotusTokenDash-Windows-portable
-          path: build/LotusTokenDash-0.1.6-Windows-x64-portable.zip
+          name: macos-app-${{ matrix.arch }}
+          path: build/macos-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: steps.select.outputs.build == 'true' && always()
+        if: always()
         with:
-          name: LotusTokenDash-build-metadata-${{ runner.os }}
-          path: source/desktop/Cargo.lock
+          name: macos-evidence-${{ matrix.arch }}
+          path: build/macos-evidence/
+  universal:
+    name: Universal Mac installer
+    needs: native
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-app-*
+          path: build/downloads
+      - name: Assemble and verify universal bundle
+        shell: bash
+        run: |
+          mkdir -p build/inputs/arm64 build/inputs/x64
+          tar -xzf build/downloads/macos-app-arm64/macos-arm64.tar.gz -C build/inputs/arm64
+          tar -xzf build/downloads/macos-app-x64/macos-x64.tar.gz -C build/inputs/x64
+          node tools/macos-package.mjs 2>&1 | tee build/universal-build.log
+          hdiutil verify build/macos-release/LotusTokenDash-0.1.6-macOS-universal.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotusTokenDash-macOS-universal
+          path: build/macos-release/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-evidence-universal
+          path: build/universal-build.log

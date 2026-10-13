@@ -16,6 +16,11 @@ struct LayoutSnapshot { #[serde(flatten)] layout:Layout, revision:u64 }
 #[derive(Serialize)]
 struct DragTicket {revision:u64, #[serde(rename="waitsForRelease")] waits_for_release:bool}
 fn enabled() -> bool { true }
+// Dock below the macOS menu bar, including displays with a camera notch.
+fn dock_top(monitor: &tauri::Monitor) -> i32 {
+    #[cfg(target_os="macos")] { monitor.work_area().position.y }
+    #[cfg(not(target_os="macos"))] { monitor.position().y }
+}
 impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true } } }
 struct Service {
     address: Arc<Mutex<Option<Result<Address, String>>>>,
@@ -63,8 +68,8 @@ fn apply_layout(app: &tauri::AppHandle, mode: String, expanded: bool, scale: f64
     let factor = window.scale_factor().map_err(|e|e.to_string())?;
     position.x += ((old_size.width as f64 - width * layout.scale * factor)/2.0).round() as i32;
     if let Some(monitor) = monitor {
-        if strip { position.y = monitor.position().y; }
-        else if was_strip { position.y = monitor.position().y + (48.0 * factor).round() as i32; }
+        if strip { position.y = dock_top(&monitor); }
+        else if was_strip { position.y = dock_top(&monitor) + (48.0 * factor).round() as i32; }
     }
     window.set_size(LogicalSize::new(width * layout.scale, height * layout.scale)).map_err(|e|e.to_string())?;
     window.set_position(position).map_err(|e|e.to_string())?;
@@ -122,7 +127,7 @@ fn finish_drag_layout(app:&tauri::AppHandle, revision:u64) -> Result<LayoutSnaps
     let factor = window.scale_factor().map_err(|e|e.to_string())?;
     let state = app.state::<Service>();
     let scale = state.layout.lock().map_err(|e|e.to_string())?.scale;
-    let snap = monitor.as_ref().map(|monitor| position.y <= monitor.position().y + (28.0 * factor) as i32).unwrap_or(false);
+    let snap = monitor.as_ref().map(|monitor| position.y <= dock_top(monitor) + (28.0 * factor) as i32).unwrap_or(false);
     let mode = if snap { "strip" } else { "hud" };
     apply_layout(app, mode.into(), false, scale,revision)?;
     if let Some(monitor) = monitor {
@@ -226,7 +231,7 @@ fn main() {
             let hud = MenuItem::with_id(app,"hud","悬浮 HUD",true,None::<&str>)?;
             let quit = MenuItem::with_id(app,"quit","退出",true,None::<&str>)?;
             let menu = Menu::with_items(app,&[&show,&hide,&details,&refresh,&strip,&hud,&topmost,&quit])?;
-            TrayIconBuilder::new().icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
+            TrayIconBuilder::new().icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(cfg!(target_os="macos"))
                 .on_menu_event(move |app,event| match event.id.as_ref() {
                     "show" => show_hud(app),
                     "hide" => hide_hud(app.clone()),
