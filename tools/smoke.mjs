@@ -14,7 +14,7 @@ await mkdir(join(testDir,'app-data'),{recursive:true});
 const prices=JSON.parse(readFileSync(join(root,'source/app/src/data/openai-prices.json'),'utf8'));
 prices.checkedAt=new Date().toISOString();
 await writeFile(join(testDir,'app-data/openai-prices.json'),JSON.stringify(prices));
-const child=spawn(process.execPath,[process.argv[2]??join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
+const child=spawn(process.execPath,[process.argv[2]??join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
 let errors='';child.stderr.on('data',chunk=>{errors+=chunk.toString();});
 try {
   const address=await new Promise((resolve,reject)=>{
@@ -22,7 +22,7 @@ try {
     const lines=createInterface({input:child.stdout});lines.on('line',line=>{try{const value=JSON.parse(line);if(value.port){clearTimeout(timer);resolve(value);}}catch{}});
     child.on('exit',code=>{clearTimeout(timer);reject(new Error(`Service exited ${code}: ${errors}`));});
   });
-  const request=async(path,source='openai')=>{const response=await fetch(`http://127.0.0.1:${address.port}/api/${path}`,{headers:{'X-Lotus-Token':address.token,'X-Lotus-Source':source},signal:AbortSignal.timeout(15_000)});assert.equal(response.status,200,`${path}: ${await response.clone().text()}`);return response.json();};
+  const request=async(path,source='openai',init={})=>{const response=await fetch(`http://127.0.0.1:${address.port}/api/${path}`,{...init,headers:{'Content-Type':'application/json','X-Lotus-Token':address.token,'X-Lotus-Source':source},signal:AbortSignal.timeout(15_000)});assert.equal(response.status,200,`${path}: ${await response.clone().text()}`);return response.json();};
   const anonymous=await fetch(`http://127.0.0.1:${address.port}/api/lotus/sources`);assert.equal(anonymous.status,401);
   const pricing=await request('pricing'); assert.ok(pricing.checkedAt);
   const groups=await request('lotus/sources');assert.deepEqual(groups.map(g=>g.id),['openai','custom:proxy','unknown']);
@@ -40,5 +40,20 @@ try {
     assert.equal(Object.keys(projects.projects).length,1); assert.ok(blocks.blocks.length);
     assert.equal(sessions.sessions.length,1);
   }
-  console.log(JSON.stringify({result:'passed',checks:'bundled worker, API authorization, parallel provider isolation, today hit rates, daily/projects/blocks/session analytics'}));
+  // The second window uses its own CODEX_HOME. Add it after all caches have
+  // been populated, and include a migrated duplicate of the primary session.
+  assert.equal((await request('lotus/today','custom:custom')).tokens,0);
+  const secondHome=join(testDir,'second-profile');
+  await mkdir(join(secondHome,'sessions'),{recursive:true});
+  await writeFile(join(secondHome,'sessions/rollout-b.jsonl'),session('b','custom',900,450));
+  await writeFile(join(secondHome,'sessions/rollout-copied-official.jsonl'),session('official','openai',100,60));
+  await request('settings/codex-data-paths','openai',{method:'PUT',body:JSON.stringify({paths:[secondHome]})});
+  const updatedGroups=await request('lotus/sources');assert.ok(updatedGroups.some(g=>g.id==='custom:custom'));
+  const b=await request('lotus/today','custom:custom');assert.equal(b.tokens,910);assert.equal(b.cacheHitRate,50);
+  const bDaily=await request('daily?agent=codex','custom:custom');assert.ok(bDaily.totals.totalCost>0);assert.equal(bDaily.totals.totalTokens,910);
+  assert.equal((await request('daily?agent=codex','openai')).totals.totalTokens,110,'copied primary log must not double-count');
+  assert.equal((await request('session-analytics?agent=codex&range=all','custom:custom')).sessions.length,1);
+  await request('settings/codex-data-paths','openai',{method:'PUT',body:JSON.stringify({paths:[]})});
+  assert.equal((await request('lotus/today','custom:custom')).tokens,0,'removing a home must invalidate cached usage');
+  console.log(JSON.stringify({result:'passed',checks:'bundled worker, API authorization, provider isolation, today/cache/cost, daily/projects/blocks/sessions, live second-home add/remove and migrated-log deduplication'}));
 } finally {child.stdin.end();await new Promise(resolve=>{child.once('exit',resolve);setTimeout(()=>{child.kill();resolve();},2000).unref();});await rm(testDir,{recursive:true,force:true});}

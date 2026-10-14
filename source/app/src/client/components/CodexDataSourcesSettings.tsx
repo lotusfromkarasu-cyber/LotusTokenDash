@@ -74,7 +74,7 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
           <div>
             <h2 className="text-lg font-extrabold tracking-tight text-stone-900">{t("Codex data sources")}</h2>
             <p className="mt-1 text-[13px] font-medium leading-relaxed text-stone-500">
-              {t("TokenDash scans official Codex data by default. Add one or more compatible custom homes for non-official clients.")}
+              {t("TokenDash scans default Codex data and detects running Windows profiles. Add other isolated homes here; paths stay saved after those windows close.")}
             </p>
           </div>
           <button
@@ -97,7 +97,7 @@ export function CodexDataSourcesSettings({ open, onClose, onSaved }: CodexDataSo
                 <textarea
                   value={draft}
                   onChange={e => { setDraft(e.target.value); setSaved(false); }}
-                  placeholder={'/Users/me/.trae/cli\n/Users/me/.custom-codex-home'}
+                  placeholder={'C:\\Users\\me\\.codex-b\nD:\\CodexProfiles\\work'}
                   spellCheck={false}
                   className="mt-2 h-32 w-full resize-none rounded-xl border border-stone-200 bg-stone-50/60 px-3 py-2.5 font-mono text-[12px] text-stone-800 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
                 />

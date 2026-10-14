@@ -1,5 +1,6 @@
 import express from 'express';
 import { startPricingSync } from './pricingStore.js';
+import { refreshCodexProfileHomes } from './codexProfileDiscovery.js';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -18,6 +19,7 @@ process.env.LOTUS_DATA_DIR = dataDir;
 process.env.TOKENDASH_SETTINGS_FILE = join(dataDir, 'settings.json');
 process.env.TOKENDASH_USAGE_INDEX_DIR = join(dataDir, 'usage-index');
 process.env.LOTUS_WORKER_FILE = join(here, 'worker.mjs');
+await refreshCodexProfileHomes();
 const stopPricingSync = startPricingSync();
 const token = randomBytes(32).toString('hex');
 const app = express();
@@ -36,8 +38,11 @@ app.use((req, res, next) => {
   providerScope.run(source, next);
 });
 app.use(express.json({ limit: '16kb' }));
-app.get('/api/lotus/sources', async (_req, res) => {
-  try { res.json(await getCodexResponse('groups')); }
+app.get('/api/lotus/sources', async (req, res) => {
+  try {
+    await refreshCodexProfileHomes(req.query.refresh === '1');
+    res.json(await getCodexResponse('groups'));
+  }
   catch (error) { res.status(500).json({ error: String(error) }); }
 });
 app.get('/api/lotus/today', async (_req, res) => {

@@ -259,6 +259,7 @@ export function Dashboard() {
   }, [dailyData.refetch, projectsData.refetch, blocksData.refetch, analyticsData.refetch]);
 
   const handleSettingsSaved = useCallback(() => {
+    window.dispatchEvent(new Event('lotus-data-paths-change'));
     void refreshAgents();
     handleRefreshAll();
   }, [handleRefreshAll, refreshAgents]);

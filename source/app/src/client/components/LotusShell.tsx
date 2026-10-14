@@ -16,9 +16,15 @@ export function LotusShell() {
   const [error, setError] = useState('');
   useEffect(() => {
     const change=()=>choose(getSource()); window.addEventListener('lotus-source-change',change);
-    void fetch('/api/lotus/sources').then(res => res.ok ? res.json() : []).then(setSources).catch(() => {});
-    const refresh = () => { if (!document.hidden) void fetch('/api/quota').then(res => res.json()).then(data => setQuotas(data.providers ?? [])).catch(() => {}); };
-    refresh(); const timer = refreshSeconds?setInterval(refresh,refreshSeconds*1000):undefined; return () => { clearInterval(timer); window.removeEventListener('lotus-source-change',change); };
+    const refresh = () => {
+      if (document.hidden) return;
+      void fetch('/api/lotus/sources').then(res => res.ok ? res.json() : []).then(next => { if (next.length) setSources(next); }).catch(() => {});
+      void fetch('/api/quota').then(res => res.json()).then(data => setQuotas(data.providers ?? [])).catch(() => {});
+    };
+    window.addEventListener('lotus-refresh', refresh);
+    window.addEventListener('lotus-data-paths-change', refresh);
+    refresh(); const timer = refreshSeconds?setInterval(refresh,refreshSeconds*1000):undefined;
+    return () => { clearInterval(timer); window.removeEventListener('lotus-source-change',change); window.removeEventListener('lotus-refresh',refresh); window.removeEventListener('lotus-data-paths-change',refresh); };
   }, [refreshSeconds]);
   const change = (id: string) => { setSource(id); choose(id); };
   async function save(event: React.FormEvent<HTMLFormElement>) {

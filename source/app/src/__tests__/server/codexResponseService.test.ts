@@ -7,6 +7,7 @@ import { closeCodexWorker, getCodexBlocksResponse, getCodexDailyResponse, resolv
 import { cache } from '../../server/cache.js';
 import { clearUsageFileIndexMemory } from '../../server/usageFileIndex.js';
 import { getPricingStore, setWorkerPricing } from '../../server/pricingStore.js';
+import { updateCodexCustomDataPaths } from '../../server/appSettings.js';
 
 const tempDirs: string[] = [];
 const originalCodexHome = process.env.CODEX_HOME;
@@ -79,6 +80,22 @@ afterEach(() => {
 });
 
 describe('codex response worker', () => {
+  it('adds a second home to an already cached default bundle without restarting the service', async () => {
+    const first = await getCodexDailyResponse();
+    const secondHome = join(process.env.CODEX_HOME!, 'second-profile');
+    mkdirSync(join(secondHome, 'sessions'), { recursive: true });
+    writeFileSync(join(secondHome, 'sessions', 'rollout-b.jsonl'), [
+      { type: 'session_meta', payload: { id: 'b-session', cwd: '/tmp/project-b', model_provider: 'custom', timestamp: '2026-09-02T00:00:00Z' } },
+      { type: 'turn_context', payload: { model: 'gpt-6.1-sol' } },
+      tokenCount('2026-09-02T00:01:00Z', 400),
+    ].map(line => JSON.stringify(line)).join('\n'));
+    updateCodexCustomDataPaths([secondHome]);
+    const second = await getCodexDailyResponse();
+    expect(second.totals.totalTokens).toBe(first.totals.totalTokens + 400);
+    expect(second.daily[0].modelBreakdowns.find(model => model.modelName === 'gpt-6.1-sol')?.cost).toBeGreaterThan(0);
+    updateCodexCustomDataPaths([]);
+    expect((await getCodexDailyResponse()).totals.totalTokens).toBe(first.totals.totalTokens);
+  });
   it('reprices a cached default bundle when the catalogue changes', async () => {
     const original = structuredClone(getPricingStore().snapshot);
     try {

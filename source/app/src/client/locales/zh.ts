@@ -1,4 +1,5 @@
 export const zh: Record<string,string> = {
+  'TokenDash scans default Codex data and detects running Windows profiles. Add other isolated homes here; paths stay saved after those windows close.':'自动读取默认 Codex 目录，并识别正在运行的 Windows 多实例。其他独立目录可在此添加，窗口关闭后仍保留统计。',
   'Show model prices':'查看模型定价', 'Model prices':'模型定价',
   'Price unavailable':'未公布定价', 'Estimate excludes models without a published price':'费用估算不包含未公布定价的模型',
   'Current OpenAI Standard prices · All dates · Official and custom':'OpenAI 当前标准单价 · 全部日期 · 官方及 custom',

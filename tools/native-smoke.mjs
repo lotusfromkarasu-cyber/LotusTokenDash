@@ -20,7 +20,7 @@ try {
   for(let launch=1;launch<=2;launch++) {
     const data=join(directory,'app-data');
     await rm(join(data,'native-result.json'),{force:true});
-    const child=spawn(executable,['--self-test'],{windowsHide:true,stdio:'ignore',env:{...process.env,CODEX_HOME:directory,LOTUS_TEST_DATA_DIR:data}});
+    const child=spawn(executable,['--self-test'],{windowsHide:true,stdio:'ignore',env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',CODEX_HOME:directory,LOTUS_TEST_DATA_DIR:data}});
     const exit=await new Promise((accept,reject)=>{
       const timer=setTimeout(()=>{child.kill();reject(new Error('Native smoke test timed out'));},90_000);
       child.once('error',error=>{clearTimeout(timer);reject(error);});

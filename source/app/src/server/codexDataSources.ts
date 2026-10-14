@@ -1,6 +1,7 @@
 import { accessSync, constants, existsSync, realpathSync } from 'node:fs';
 import { basename, delimiter, join } from 'node:path';
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { normalizeLocalDataPath, readAppSettings } from './appSettings.js';
 
 export type CodexDataPathKind = 'official' | 'environment' | 'custom';
@@ -25,7 +26,8 @@ function parsePathList(value: string | undefined): string[] {
 /** Return the canonical de-duplication key for a path, preserving missing paths. */
 function canonicalPathKey(path: string): string {
   try {
-    return existsSync(path) ? realpathSync(path) : path;
+    const resolved = existsSync(path) ? realpathSync(path) : path;
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   } catch {
     return path;
   }
@@ -109,15 +111,22 @@ export function getCodexDataPathStatuses(): CodexDataPathStatus[] {
 
 /** Resolve every Codex-compatible data path that should contribute to usage. */
 export function getCodexHomes(): string[] {
-  return getCodexDataPathStatuses().map(status => status.path);
+  return workerDataPaths ?? getCodexDataPathStatuses().map(status => status.path);
+}
+
+let workerDataPaths: string[] | undefined;
+/** Each worker request receives the same resolved homes as the main process. */
+export function setWorkerCodexDataPaths(paths: string[]): void { workerDataPaths = uniquePaths(paths); }
+export function getCodexDataSourceRevision(): string {
+  return createHash('sha256').update(JSON.stringify(getCodexHomes().map(canonicalPathKey))).digest('hex').slice(0, 16);
 }
 
 /** Return every live/archived transcript directory for all configured paths. */
 export function getCodexSessionDirs(): string[] {
-  return uniquePaths(getCodexDataPathStatuses().flatMap(status => status.sessionDirs));
+  return uniquePaths(getCodexHomes().flatMap(codexSessionDirsForDataPath));
 }
 
 /** Check whether at least one configured Codex transcript directory is readable. */
 export function isCodexSessionDirAccessible(): boolean {
-  return getCodexDataPathStatuses().some(status => status.readable);
+  return getCodexHomes().some(isDataPathReadable);
 }

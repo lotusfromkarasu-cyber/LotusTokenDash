@@ -1,6 +1,7 @@
 import { parentPort } from 'node:worker_threads';
 import * as parser from './codexParser.js';
 import { setWorkerPricing } from './pricingStore.js';
+import { setWorkerCodexDataPaths } from './codexDataSources.js';
 import type { PricingSnapshot } from '../shared/pricing.js';
 import { providerScope } from './providerScope.js';
 import { getSessionAnalytics, getSessionDetail, type SessionAnalyticsFilters } from './sessionAnalyticsParser.js';
@@ -21,7 +22,7 @@ interface SerializedAggregateOptions {
   granularity?: BlockGranularity;
 }
 
-type WorkerRequest = { provider?: string; pricing: PricingSnapshot } & (
+type WorkerRequest = { provider?: string; pricing: PricingSnapshot; dataPaths: string[] } & (
   | { id: number; kind: 'bundle'; options?: SerializedAggregateOptions }
   | { id: number; kind: 'daily'; options?: SerializedAggregateOptions }
   | { id: number; kind: 'projects'; options?: SerializedAggregateOptions }
@@ -61,6 +62,7 @@ async function run(request: WorkerRequest): Promise<unknown> {
 
 parentPort?.on('message', (request: WorkerRequest) => {
   setWorkerPricing(request.pricing);
+  setWorkerCodexDataPaths(request.dataPaths);
   void providerScope.run(request.provider, () => run(request))
     .then(data => parentPort?.postMessage({ id: request.id, ok: true, data }))
     .catch(error => {

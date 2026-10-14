@@ -8,6 +8,7 @@ import { getBlocksResponse, getProviderGroups, getCodexResponses, getDailyRespon
 import { type BlockGranularity } from './claudeJsonlParser.js';
 import { getPricingRevision, getPricingStore } from './pricingStore.js';
 import { currentProvider } from './providerScope.js';
+import { getCodexDataSourceRevision, getCodexHomes } from './codexDataSources.js';
 
 interface CodexResponseBundle {
   daily: DailyResponse;
@@ -76,7 +77,7 @@ function serializeOptions(options?: CodexServiceOptions): SerializedAggregateOpt
 type CodexServiceOptions = Partial<AggregateOptions> & { granularity?: BlockGranularity; sessionFilters?: SessionAnalyticsFilters; sessionId?: string; includeContent?: boolean };
 
 function requestKey(kind: CodexResponseKind, options?: CodexServiceOptions): string {
-  return `${getPricingRevision()}:${currentProvider() ?? 'upstream'}:${kind}:${JSON.stringify(serializeOptions(options) ?? {})}`;
+  return `${getCodexDataSourceRevision()}:${getPricingRevision()}:${currentProvider() ?? 'upstream'}:${kind}:${JSON.stringify(serializeOptions(options) ?? {})}`;
 }
 
 function workerTimeoutMs(): number {
@@ -162,7 +163,7 @@ function runInWorker<K extends CodexResponseKind>(kind: K, options?: CodexServic
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => failWorker(new Error('Usage parsing timed out')), workerTimeoutMs());
     pending.set(id, { resolve, reject, timer });
-    sharedWorker!.postMessage({ id, kind, pricing: getPricingStore().snapshot, provider: currentProvider(), options: serializeOptions(options) });
+    sharedWorker!.postMessage({ id, kind, dataPaths: getCodexHomes(), pricing: getPricingStore().snapshot, provider: currentProvider(), options: serializeOptions(options) });
   });
 }
 
@@ -175,6 +176,7 @@ export async function getCodexResponse<K extends CodexResponseKind>(
   }
 
   const pricingRevision = getPricingRevision();
+  const dataSourceRevision = getCodexDataSourceRevision();
   const key = requestKey(kind, options);
   const cached = resultCache.get(key) as { data: CodexResponseByKind<K>; expiresAt: number } | undefined;
   if (cached && Date.now() <= cached.expiresAt) return cached.data;
@@ -186,7 +188,7 @@ export async function getCodexResponse<K extends CodexResponseKind>(
     .then(async data => {
       // A weekly sync may finish while the worker is calculating. Never publish
       // the old calculation into an HTTP cache under the new price revision.
-      if (getPricingRevision() !== pricingRevision) return getCodexResponse(kind, options);
+      if (getPricingRevision() !== pricingRevision || getCodexDataSourceRevision() !== dataSourceRevision) return getCodexResponse(kind, options);
       resultCache.set(key, { data, expiresAt: Date.now() + RESULT_TTL_MS });
       return data;
     })

@@ -46,6 +46,8 @@ node tools/tasks.mjs desktop
 
 `source/app/node_modules` 是指向 `runtime/development/node_modules` 的链接。Windows 优先构建；GitHub Actions 可手动选择三平台，也会在版本 tag 时构建三平台。产物位于 `build/rust-target`；本地交付包归档到 `releases/<version>`。
 
+Windows 启动时自动识别正在运行的 Codex 多实例，将独立会话目录保存为额外数据源；HUD 与分析页来源列表随刷新更新。已保存的第二实例关闭后仍参与历史统计。也可在“Codex 数据来源”设置中手动添加任意独立 CODEX_HOME；官方与 custom 分组独立，迁移副本去重。
+
 首次运行读取本机的会话目录和 Codex 登录状态。个人会话、登录文件、API token 和使用量索引不会提交到仓库。应用设置独立存放在系统应用数据目录。来源无法确认的历史日志单独展示。
 
 上游与口径说明见 [docs/UPSTREAM.md](docs/UPSTREAM.md)。

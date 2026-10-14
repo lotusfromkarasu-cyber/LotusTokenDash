@@ -71,9 +71,11 @@ function Hud() {
         if(active) {setQuota(data);setQuotaError(data.status.state==='ok'?'':data.status.message??t('Official quota unavailable'));}
       } catch(error) {if(active)setQuotaError(String(error));}
     };
-    void fetch('/api/lotus/sources').then(res=>res.json()).then(setSources).catch(()=>{});
-    void refreshQuota(); const timer = refreshSeconds?setInterval(()=>{if(!document.hidden)void refreshQuota();},refreshSeconds*1000):undefined;
-    const refresh=()=>void refreshQuota();
+    const refresh=()=>{
+      void fetch('/api/lotus/sources').then(res=>res.ok?res.json():[]).then(next=>{if(active&&next.length)setSources(next);}).catch(()=>{});
+      void refreshQuota();
+    };
+    refresh(); const timer = refreshSeconds?setInterval(()=>{if(!document.hidden)refresh();},refreshSeconds*1000):undefined;
     const visible=()=>{if(!document.hidden)refresh();};
     window.addEventListener('lotus-refresh',refresh); document.addEventListener('visibilitychange',visible);
     return () => { active=false;clearInterval(timer);window.removeEventListener('lotus-refresh',refresh);document.removeEventListener('visibilitychange',visible); };
