@@ -31,11 +31,15 @@ else if(response.status===422) {
 const assets=new Map((release.assets??[]).map(asset=>[asset.name,asset]));
 for(const name of await readdir(directory)) {
   if(!/\.(exe|zip|txt)$/.test(name))continue;
-  const existing=assets.get(name);
+  // GitHub renamed the old non-ASCII instructions filename to default.txt.
+  const existing=assets.get(name)??(name==='Instructions.txt'?assets.get('default.txt'):undefined);
   if(existing&&!replace){console.log(`Skipped ${name} (already on the release)`);continue;}
   const data=await readFile(join(directory,name));
   const digest=`sha256:${createHash('sha256').update(data).digest('hex')}`;
-  if(existing?.digest===digest){console.log(`Verified ${name} (already matches)`);continue;}
+  if(existing?.digest===digest){
+    if(existing.name!==name)await githubJson(`/releases/assets/${existing.id}`,'PATCH',{name});
+    console.log(`Verified ${name} (already matches)`);continue;
+  }
   // Keep the previous asset downloadable until its replacement has uploaded.
   const uploadName=existing?`${name}.replacement`:name;
   let replacement=assets.get(uploadName);
