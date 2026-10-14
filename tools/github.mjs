@@ -6,7 +6,12 @@ const binary=process.platform==='win32'?'C:/Program Files/Git/cmd/git.exe':'git'
 const raw=execFileSync(binary,['credential','fill'],{input:'protocol=https\nhost=github.com\n\n',encoding:'utf8',windowsHide:true,env:{...process.env,GIT_TERMINAL_PROMPT:'0',GCM_INTERACTIVE:'never'}});
 const fields=Object.fromEntries(raw.trim().split(/\r?\n/).map(line=>{const i=line.indexOf('=');return[line.slice(0,i),line.slice(i+1)];}));
 const [method='GET',path='/user',file]=process.argv.slice(2);
-const res=await fetch(`https://api.github.com${path}`,{method,headers:{Authorization:`Bearer ${fields.password}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},signal:AbortSignal.timeout(60_000)});
+if (file && method === 'GET' && /\/actions\/artifacts\/\d+\/zip$/.test(path)) {
+  const { downloadArtifact } = await import('./artifact-download.mjs');
+  await downloadArtifact(`https://api.github.com${path}`, file, { Authorization:`Bearer ${fields.password}`, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' });
+  process.exit(0);
+}
+const res=await fetch(`https://api.github.com${path}`,{method,headers:{Authorization:`Bearer ${fields.password}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},signal:AbortSignal.timeout(file ? 300_000 : 60_000)});
 if(!res.ok) throw new Error(`GitHub ${res.status}: ${await res.text()}`);
 if(file) {await writeFile(file,Buffer.from(await res.arrayBuffer()));console.log(`Saved ${file}`);}
 else {const data=await res.json(); if(path==='/user')console.log(JSON.stringify({login:data.login,id:data.id}));

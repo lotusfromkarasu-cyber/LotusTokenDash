@@ -66,3 +66,14 @@
 - 打包服务检查（bundled worker、API authorization、parallel provider isolation、today hit rates、daily/projects/blocks/session analytics）通过。
 - 价格来源：DeepSeek 官方定价页（峰时／低谷），Qwen3.8-Flash-Next 列表价与 2026-10-12 第三方核对一致。
 - 源码 368dd788ad36cd7735387cb53beefd7bdf2152d2 的 [Windows 构建与打包原生验收](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/38262492739) 通过；本机安装到 K:/App/TOOL/LotusTokenDash 的 v0.1.6 通过两次冷启动、分析页渲染、唯一窗口、HUD 刷新和拖动／悬停恢复。未使用 Computer Use。
+
+# v0.1.7 多实例 Codex 数据目录
+
+- 双开启动器将第二实例的 CODEX_HOME 与 user-data 隔离，旧版本默认目录集合不包含它。通过正在运行的 Windows Codex 进程读取 user-data 路径，验证对应配置及会话目录后，写入 TokenDash 额外数据源；保留原有手动路径，不修改 Codex 配置、登录、会话或启动器。
+- 启动和来源刷新执行有时限的异步识别，重复请求合并，每分钟最多一次。已保存路径在第二窗口退出后仍参与历史统计。非 Windows 继续使用手动及环境目录。
+- 主服务向 Worker 传递完整目录快照；内存／磁盘／Worker 响应缓存包含目录版本，目录改变后立即失效。迁移到另一目录的同会话事件继续去重。
+- HUD 和分析窗口随刷新重新读取来源列表，设置中新增目录后也立即刷新来源。
+- 前后端类型检查及 222 项单元测试通过。4 项相关界面检查通过，覆盖新 profile 的来源出现、切换及独立 Token／命中率、刷新设置。
+- 打包接口检查通过：缓存预热后加入／移除第二独立目录，验证新的 custom Token、费用及会话，同时确认迁移的官方副本不重复计量。真实第二实例目录 API 审计确认 custom 历史用量及费用可读取，日期采用事件时间。
+- 源码 8000fe2f96a0cd81fca8b62d526f09bdf704f06c 的 [Windows 构建与打包原生检查](https://github.com/lotusfromkarasu-cyber/LotusTokenDash/actions/runs/38528002034) 通过。
+- 本机安装版已更新到 0.1.7，通过两次隐藏窗口冷启动、分析页渲染、唯一窗口、HUD 刷新及拖动／悬停恢复。正常模式重启后确认自动保存第二实例目录，两端 Codex 保持运行。未使用 Computer Use；个人数据未提交仓库。
