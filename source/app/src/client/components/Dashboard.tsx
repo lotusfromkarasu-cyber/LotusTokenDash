@@ -14,6 +14,7 @@ import { useLocalStorageState } from '../hooks/useLocalStorageState.js';
 import { formatDate, formatTokens, formatUSD, formatPercent, formatProjectName } from '../utils/formatters.js';
 import { cacheHitRate as calculateCacheHitRate, costSavedByCache } from '../utils/cacheCalculations.js';
 import { modelTokenMode, modelBreakdownTokens } from '../utils/modelAggregation.js';
+import { buildHourlyModelTrend } from '../utils/hourlyModelTrend.js';
 
 import { shortModelName } from '../utils/modelNames.js';
 import { AnalyticsSection } from './AnalyticsSection.js';
@@ -307,33 +308,7 @@ export function Dashboard() {
   // Hourly model trend data (for today view, built from session blocks)
   const hourlyModelTrendData = useMemo(() => {
     if (!isToday || !blocksData.data) return [];
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHour = now.getHours();
-    const buckets: Record<number, Record<string, number>> = {};
-    for (let h = 0; h <= currentHour; h++) buckets[h] = {};
-
-    for (const block of blocksData.data.blocks) {
-      if (block.isGap) continue;
-      const start = new Date(block.startTime);
-      const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-      if (startStr !== todayStr) continue;
-      const hour = start.getHours();
-      if (hour > currentHour) continue;
-      const value = isTokens ? block.totalTokens : block.costUSD;
-      const names = block.models.map(shortModelName);
-      if (names.length === 0) {
-        buckets[hour]['Other'] = (buckets[hour]['Other'] || 0) + value;
-      } else {
-        const perModel = value / names.length;
-        for (const name of names) {
-          buckets[hour][name] = (buckets[hour][name] || 0) + perModel;
-        }
-      }
-    }
-    return Object.entries(buckets)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([h, models]) => ({ hour: `${h.padStart(2, '0')}:00`, ...models }));
+    return buildHourlyModelTrend(blocksData.data.blocks, isTokens ? 'tokens' : 'usd');
   }, [isToday, blocksData.data, isTokens]);
 
   // Hourly cache trend data (for today view)

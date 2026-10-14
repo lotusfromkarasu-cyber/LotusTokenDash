@@ -8,6 +8,7 @@ import { cache } from '../../server/cache.js';
 import { clearUsageFileIndexMemory } from '../../server/usageFileIndex.js';
 import { getPricingStore, setWorkerPricing } from '../../server/pricingStore.js';
 import { updateCodexCustomDataPaths } from '../../server/appSettings.js';
+import { validateBlocks } from '../../shared/schemas.js';
 
 const tempDirs: string[] = [];
 const originalCodexHome = process.env.CODEX_HOME;
@@ -80,6 +81,39 @@ afterEach(() => {
 });
 
 describe('codex response worker', () => {
+  it.each([
+    {},
+    { timezone: 'UTC' },
+    { project: 'project-a', granularity: '5m' as const },
+  ])('preserves per-model usage and prices through block validation: %j', async options => {
+    const sessionDir = join(process.env.CODEX_HOME!, 'sessions', '2026', '09', '02');
+    for (const [file, model, tokens] of [
+      ['rollout-worker.jsonl', 'gpt-6.1-sol', 5_000],
+      ['rollout-astra.jsonl', 'gpt-6-astra', 2_000],
+    ] as const) {
+      writeFileSync(join(sessionDir, file), [
+        { type: 'session_meta', payload: { id: model, cwd: '/tmp/project-a', timestamp: '2026-09-02T00:00:00Z' } },
+        { type: 'turn_context', payload: { model } },
+        tokenCount('2026-09-02T00:01:00Z', tokens),
+      ].map(line => JSON.stringify(line)).join('\n'));
+    }
+
+    const response = validateBlocks(await getCodexBlocksResponse(options));
+    expect(response.blocks).toHaveLength(1);
+    const block = response.blocks[0];
+    expect(Object.fromEntries(block.modelBreakdowns.map(b => [b.modelName, b.totalTokens]))).toEqual({
+      'gpt-6.1-sol': 5_000, 'gpt-6-astra': 2_000,
+    });
+    const prices = getPricingStore().snapshot.models;
+    const expectedSol = (4_990 * prices['gpt-6.1-sol'].inputPer1M + 10 * prices['gpt-6.1-sol'].outputPer1M) / 1_000_000;
+    const expectedAstra = (1_990 * prices['gpt-6-astra'].inputPer1M + 10 * prices['gpt-6-astra'].outputPer1M) / 1_000_000;
+    expect(block.modelBreakdowns.find(b => b.modelName === 'gpt-6.1-sol')!.costUSD).toBeCloseTo(expectedSol, 12);
+    expect(block.modelBreakdowns.find(b => b.modelName === 'gpt-6-astra')!.costUSD).toBeCloseTo(expectedAstra, 12);
+    expect(expectedSol).not.toBeCloseTo(expectedAstra, 6);
+    expect(block.totalTokens).toBe(7_000);
+    expect(block.costUSD).toBeCloseTo(expectedSol + expectedAstra, 12);
+  });
+
   it('adds a second home to an already cached default bundle without restarting the service', async () => {
     const first = await getCodexDailyResponse();
     const secondHome = join(process.env.CODEX_HOME!, 'second-profile');

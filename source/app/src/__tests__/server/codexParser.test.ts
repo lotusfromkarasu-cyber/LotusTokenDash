@@ -350,6 +350,11 @@ describe('parseCodexSession', () => {
     expect(daily.modelsUsed.sort()).toEqual(['gpt-5.4', 'gpt-5.5']);
     expect(daily.modelBreakdowns.find(b => b.modelName === 'gpt-5.4')).toMatchObject({ inputTokens: 50, outputTokens: 100 });
     expect(daily.modelBreakdowns.find(b => b.modelName === 'gpt-5.5')).toMatchObject({ inputTokens: 100, outputTokens: 25 });
+    const breakdowns = responses.blocks.blocks[0].modelBreakdowns!;
+    expect(breakdowns.map(b => [b.modelName, b.totalTokens])).toEqual([['gpt-5.4', 150], ['gpt-5.5', 125]]);
+    for (const model of breakdowns) {
+      expect(model.costUSD).toBeCloseTo(daily.modelBreakdowns.find(b => b.modelName === model.modelName)!.cost, 12);
+    }
   });
 });
 

@@ -56,6 +56,12 @@ export interface ProjectsResponse {
   projects: Record<string, DailyEntry[]>;
 }
 
+export interface BlockModelBreakdown {
+  modelName: string;
+  totalTokens: number;
+  costUSD: number;
+}
+
 export interface BlockEntry {
   id: string;
   startTime: string;
@@ -73,6 +79,7 @@ export interface BlockEntry {
   totalTokens: number;
   costUSD: number;
   models: string[];
+  modelBreakdowns?: BlockModelBreakdown[];
 }
 
 export interface BlocksResponse {

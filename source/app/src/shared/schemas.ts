@@ -71,6 +71,11 @@ const BlockEntrySchema = z.object({
   totalTokens: z.number().default(0),
   costUSD: z.number().default(0),
   models: z.array(z.string()).default([]),
+  modelBreakdowns: z.array(z.object({
+    modelName: z.string(),
+    totalTokens: z.number(),
+    costUSD: z.number(),
+  })).default([]),
 });
 
 export const BlocksResponseSchema = z.object({

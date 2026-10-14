@@ -8,7 +8,7 @@ import { createInterface } from 'node:readline';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const testDir=join(root,'build/smoke-fixtures'); await mkdir(join(testDir,'sessions'),{recursive:true});
 const stamp=new Date().toISOString();
-function session(id,provider,input,cached) {return [{type:'session_meta',payload:{id,cwd:'K:\\project',model_provider:provider,timestamp:stamp}},{type:'turn_context',payload:{model:'gpt-6.1-sol'}},{type:'event_msg',timestamp:stamp,payload:{type:'token_count',info:{total_token_usage:{input_tokens:input,cached_input_tokens:cached,output_tokens:10,total_tokens:input+10}}}}].map(x=>JSON.stringify(x)).join('\n');}
+function session(id,provider,input,cached,model='gpt-6.1-sol') {return [{type:'session_meta',payload:{id,cwd:'K:\\project',model_provider:provider,timestamp:stamp}},{type:'turn_context',payload:{model}},{type:'event_msg',timestamp:stamp,payload:{type:'token_count',info:{total_token_usage:{input_tokens:input,cached_input_tokens:cached,output_tokens:10,total_tokens:input+10}}}}].map(x=>JSON.stringify(x)).join('\n');}
 for(const [id,provider,input,cached] of [['official','openai',100,60],['proxy','proxy',300,30],['unknown',undefined,70,0]]) await writeFile(join(testDir,`sessions/rollout-${id}.jsonl`),session(id,provider,input,cached));
 await mkdir(join(testDir,'app-data'),{recursive:true});
 const prices=JSON.parse(readFileSync(join(root,'source/app/src/data/openai-prices.json'),'utf8'));
@@ -55,5 +55,17 @@ try {
   assert.equal((await request('session-analytics?agent=codex&range=all','custom:custom')).sessions.length,1);
   await request('settings/codex-data-paths','openai',{method:'PUT',body:JSON.stringify({paths:[]})});
   assert.equal((await request('lotus/today','custom:custom')).tokens,0,'removing a home must invalidate cached usage');
-  console.log(JSON.stringify({result:'passed',checks:'bundled worker, API authorization, provider isolation, today/cache/cost, daily/projects/blocks/sessions, live second-home add/remove and migrated-log deduplication'}));
+  // Both models share an hour but have different usage and prices. Verify the
+  // real worker -> route -> schema path, rather than just the parser in isolation.
+  await writeFile(join(testDir,'sessions/rollout-model-sol.jsonl'),session('model-sol','model-test',5000,3000));
+  await writeFile(join(testDir,'sessions/rollout-model-astra.jsonl'),session('model-astra','model-test',2000,100,'gpt-6-astra'));
+  const [modelDaily,modelBlocks]=await Promise.all(['daily?agent=codex&refresh=1','blocks?agent=codex&refresh=1'].map(path=>request(path,'custom:model-test')));
+  assert.equal(modelBlocks.blocks.length,1);
+  const mixed=modelBlocks.blocks[0];
+  assert.deepEqual(mixed.modelBreakdowns.map(m=>[m.modelName,m.totalTokens]).sort(),[['gpt-6-astra',2010],['gpt-6.1-sol',5010]].sort());
+  assert.equal(mixed.totalTokens,7020);
+  assert.notEqual(mixed.modelBreakdowns[0].costUSD,mixed.modelBreakdowns[1].costUSD);
+  for(const model of mixed.modelBreakdowns) assert.ok(Math.abs(model.costUSD-modelDaily.daily[0].modelBreakdowns.find(m=>m.modelName===model.modelName).cost)<1e-12);
+  assert.ok(Math.abs(mixed.modelBreakdowns.reduce((sum,m)=>sum+m.costUSD,0)-mixed.costUSD)<1e-12);
+  console.log(JSON.stringify({result:'passed',checks:'bundled worker, API authorization, provider isolation, today/cache/cost, daily/projects/blocks/sessions, live second-home add/remove, migrated-log deduplication and exact per-model hourly tokens/cost'}));
 } finally {child.stdin.end();await new Promise(resolve=>{child.once('exit',resolve);setTimeout(()=>{child.kill();resolve();},2000).unref();});await rm(testDir,{recursive:true,force:true});}

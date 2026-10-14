@@ -25,7 +25,8 @@ export async function getBlocks(req: Request, res: Response): Promise<void> {
   const granularity = parseGranularity(req.query.granularity);
 
   try {
-    const cacheKey = `blocks:${agent}:${project || 'all'}${granularity !== 'hour' ? `:${granularity}` : ''}`;
+    // Do not reuse pre-upgrade disk responses that omit per-model usage.
+    const cacheKey = `blocks:v2:${agent}:${project || 'all'}${granularity !== 'hour' ? `:${granularity}` : ''}`;
     if (!force) {
       const cached = cache.get(cacheKey);
       if (cached) {

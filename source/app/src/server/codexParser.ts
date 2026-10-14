@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import type { DailyEntry, DailyResponse, ProjectsResponse, BlockEntry, BlocksResponse, ModelBreakdown } from '../shared/types.js';
+import type { DailyEntry, DailyResponse, ProjectsResponse, BlockEntry, BlocksResponse, ModelBreakdown, BlockModelBreakdown } from '../shared/types.js';
 import { getPricingStore, getPricingRevision } from './pricingStore.js';
 import { calculateCost, calculateCacheSavings, getModelPricing, isLongContextCodexRequest, normalizeCodexModelName } from './codexPricing.js';
 import { type BlockGranularity } from './claudeJsonlParser.js';
@@ -689,6 +689,14 @@ function buildModelBreakdowns(modelAccs: Map<string, TokenAccumulator>): ModelBr
   });
 }
 
+function buildBlockModelBreakdowns(modelAccs: Map<string, TokenAccumulator>): BlockModelBreakdown[] {
+  return [...modelAccs].map(([modelName, acc]) => ({
+    modelName,
+    totalTokens: acc.totalTokens,
+    costUSD: calculateCost(acc, new Set([modelName])),
+  }));
+}
+
 type GroupKey = string;
 
 function groupSessions(
@@ -828,7 +836,8 @@ function buildBlocksResponseFromSummaries(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, bucket], idx) => {
       const { acc, models } = toAggregateBucket(bucket);
-      const cost = buildModelBreakdowns(models).reduce((sum, model) => sum + model.cost, 0);
+      const modelBreakdowns = buildBlockModelBreakdowns(models);
+      const cost = modelBreakdowns.reduce((sum, model) => sum + model.costUSD, 0);
       const [datePart, timePart] = key.split(' ');
       const hour = timePart.slice(0, 2);
       return {
@@ -850,6 +859,7 @@ function buildBlocksResponseFromSummaries(
         totalTokens: acc.totalTokens,
         costUSD: cost,
         models: [...models.keys()],
+        modelBreakdowns,
       };
     });
 
@@ -977,7 +987,8 @@ function buildBlocksResponse(
     .filter(([key]) => !windowStartKey || key >= windowStartKey)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, { acc, models }], idx) => {
-      const cost = buildModelBreakdowns(models).reduce((sum, model) => sum + model.cost, 0);
+      const modelBreakdowns = buildBlockModelBreakdowns(models);
+      const cost = modelBreakdowns.reduce((sum, model) => sum + model.costUSD, 0);
       const [datePart, timePart] = key.split(' ');
       const hour = timePart.slice(0, 2);
 
@@ -1000,6 +1011,7 @@ function buildBlocksResponse(
         totalTokens: acc.totalTokens,
         costUSD: cost,
         models: [...models.keys()],
+        modelBreakdowns,
       };
     });
 
