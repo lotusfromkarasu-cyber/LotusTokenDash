@@ -50,8 +50,9 @@ function Hud() {
     if(!sourceOpen)return;
     const close=(event:PointerEvent)=>{if(!sourcePicker.current?.contains(event.target as Node)){setSourceOpen(false);controller.hold(false);}};
     const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setSourceOpen(false);controller.hold(false);}};
-    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
-    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+    const blur=()=>{setSourceOpen(false);controller.hold(false);};
+    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);window.addEventListener('blur',blur);
+    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);window.removeEventListener('blur',blur);};
   },[sourceOpen,controller]);
   const refreshRef = useRef<() => void>(()=>{});
   useEffect(() => {

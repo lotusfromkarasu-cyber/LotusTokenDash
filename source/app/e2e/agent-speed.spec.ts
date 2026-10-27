@@ -55,4 +55,7 @@ test('docked source menu stays open while the pointer leaves before selecting',a
   await page.screenshot({path:'../../build/v018-hud-preview.png'});
   await page.getByRole('option',{name:'custom'}).click();
   await expect(page.locator('.daily')).toContainText('22K');
+  await page.getByLabel('Source',{exact:true}).click();
+  await page.mouse.move(450,250);await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  await expect(page.locator('.hud')).toHaveClass(/thin/);
 });
