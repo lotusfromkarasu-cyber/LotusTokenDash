@@ -6,7 +6,7 @@ LotusTokenDash 采用 OpenAI **当前 Standard 文本 Token 单价**估算费用
 
 ## 数据来源
 
-后台直接 HTTPS 下载 [OpenAI 官方定价 Markdown](https://developers.openai.com/api/docs/pricing.md)，只读取 `Standard pricing data` 表和列名，不混入 Batch、Flex、Fast、Ultrafast 的价格。2026-10-03 核对的表包含 40 个模型，覆盖当前 Codex 菜单的全部 8 个模型。
+后台直接 HTTPS 下载 [OpenAI 官方定价 Markdown](https://developers.openai.com/api/docs/pricing.md)，读取第一个 `Standard pricing data` 区块中的长／短上下文表和普通表，不混入 Batch、Flex、Fast、Ultrafast 的价格。2026-10-27 核对的官方模型价格包含 GPT-6.1 Terra。
 
 价格是数据，不是程序中的单价常量：
 
@@ -24,6 +24,8 @@ LotusTokenDash 采用 OpenAI **当前 Standard 文本 Token 单价**估算费用
 成功核对后每 **7 天**请求一次。请求携带 `If-None-Match`；官方返回 `304` 时只更新核对时间，价格未变化时不重算费用。关闭期间到期，下一次打开补查。
 
 下载失败或文档不能解析时保留上次核实的价格，次日重试。每次更新通过临时文件加重命名保存，避免半写入文件。连接支持系统／环境代理。
+
+v0.1.8 修复官方标准价格区块拆为两张表后同步失败的问题。升级时，较新的随包价格优先于旧缓存，并在启动后重新检查官方页面。GPT-6.1 Terra 的 Standard 价格为每百万 Token：输入 $1、缓存输入 $0.05、输出 $5；超过 272K 输入的请求分别为 $2、$0.10、$7.50。
 
 价格发生变化时，费用缓存按价格版本失效，后台计算线程接收相同的价格快照。已有 Token 索引保留，日报、项目、时段与会话金额、缓存节省金额和定价说明随当前价格更新。价格同步与界面的用量刷新间隔独立。
 

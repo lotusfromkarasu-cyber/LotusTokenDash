@@ -14,6 +14,7 @@ import { cache } from '../cache.js';
 import { getCodexDataPathStatuses, getCustomCodexDataPaths, getEnvironmentCodexDataPaths, getOfficialCodexDataPaths } from '../codexDataSources.js';
 import { updateCodexCustomDataPaths } from '../appSettings.js';
 import { validateAppSettings } from '../../shared/schemas.js';
+import { speedHistory, speedSnapshot } from '../speedService.js';
 
 async function getQuota(_req: Request, res: Response): Promise<void> {
   // Fresh data only — quotaService handles cache, stale retention, and per-provider
@@ -125,6 +126,8 @@ function getAppInfo(info: AppInfo): (_req: Request, res: Response) => void {
 }
 
 export function registerApiRoutes(router: Router, appInfo: AppInfo): void {
+  router.get('/lotus/speed', (_req, res) => res.json(speedSnapshot()));
+  router.get('/lotus/speed/history', (req, res) => res.json(speedHistory(req.query.refresh === '1')));
   router.get('/pricing', (_req, res) => res.json(getPricingStatus()));
   router.get('/app-info', getAppInfo(appInfo));
   router.get('/agents', getAgents);

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -23,6 +23,12 @@ describe('Official price catalogue', () => {
     expect(() => parseOpenAIPrices('<html>unavailable</html>')).toThrow();
     expect(() => parseOpenAIPrices(markdown().replace('$2 |', 'invalid |'))).toThrow();
   });
+  it('reads both Standard table formats and ignores the Batch table', () => {
+    const second='\n| Model | Input | Output | Cached input |\n| --- | --- | --- | --- |\n| gpt-test-legacy | $1 | $3 | $0.5 |\n';
+    const result=parseOpenAIPrices(markdown().replace('### Batch pricing data',`${second}### Batch pricing data`));
+    expect(result.models['gpt-test-legacy']).toEqual({inputPer1M:1,cachedInputPer1M:.5,outputPer1M:3});
+    expect(result.models['gpt-6.1-sol'].inputPer1M).toBe(2);
+  });
   it('normalizes annotations and retains explicitly dated prices', () => {
     expect(parseOpenAIPrices(markdown().replace('| gpt-5.5 |', '| gpt-5.5 (<272K context length) |')).models['gpt-5.5']).toBeDefined();
     const snapshot = new PricingStore().snapshot;
@@ -30,7 +36,7 @@ describe('Official price catalogue', () => {
     expect(resolvePricedModel('gpt-4o-2024-05-13', snapshot)).toBe('gpt-4o-2024-05-13');
   });
   it.each([
-    ['gpt-6.1-sol', 11.05], ['gpt-6-astra', 55.5], ['gpt-6-sol', 11.1], ['gpt-6-luna', 0.555],
+    ['gpt-6.1-sol', 11.05], ['gpt-6.1-terra', 5.525], ['gpt-6-astra', 55.5], ['gpt-6-sol', 11.1], ['gpt-6-luna', 0.555],
     ['gpt-5.6-sol', 22.2], ['gpt-5.6-terra', 13.1], ['gpt-5.6-luna', 1.31], ['gpt-5.5', 32.75],
   ])('prices %s at the verified current Standard rates', (id, expected) => {
     expect(calculateCost(tokens, new Set([id as string]))).toBeCloseTo(expected as number, 8);
@@ -57,7 +63,7 @@ describe('Official price catalogue', () => {
 describe('Weekly background sync', () => {
   it('downloads once, coalesces calls, persists across restarts, and checks by ETag after exactly 7 days', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lotus-pricing-'));
-    let now = Date.parse('2026-10-03T08:00:00Z');
+    let now = Date.parse(new PricingStore().snapshot.fetchedAt)+1000;
     const request = vi.fn().mockResolvedValueOnce(new Response(markdown(), { headers: { etag: '"prices-1"' } }))
       .mockResolvedValueOnce(new Response(null, { status: 304 }));
     try {
@@ -76,6 +82,17 @@ describe('Weekly background sync', () => {
       expect(restarted.revision).toBe(revision);
       expect(Date.parse(restarted.snapshot.checkedAt!)).toBe(now);
     } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+  it('uses newer bundled prices over an older installed snapshot', () => {
+    const root=mkdtempSync(join(tmpdir(),'lotus-pricing-upgrade-'));
+    try {
+      const path=join(root,'prices.json'); const old=structuredClone(new PricingStore().snapshot);
+      old.fetchedAt='2026-10-17T00:00:00Z'; old.checkedAt=old.fetchedAt; delete old.models['gpt-6.1-terra'];
+      writeFileSync(path,JSON.stringify(old));
+      const upgraded=new PricingStore(path);
+      expect(upgraded.snapshot.models['gpt-6.1-terra']).toEqual({inputPer1M:1,cachedInputPer1M:.05,outputPer1M:5,longContextInputPer1M:2,longContextCachedInputPer1M:.1,longContextOutputPer1M:7.5});
+      expect(upgraded.snapshot.checkedAt).toBeNull();
+    } finally {rmSync(root,{recursive:true,force:true});}
   });
   it('keeps custom ecnu prices and aliases after a sync replaces the catalogue', async () => {
     const request = vi.fn().mockResolvedValueOnce(new Response(markdown(), { headers: { etag: '"custom"' } }));

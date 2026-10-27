@@ -20,6 +20,7 @@ import { shortModelName } from '../utils/modelNames.js';
 import { AnalyticsSection } from './AnalyticsSection.js';
 import { CodexDataSourcesSettings } from './CodexDataSourcesSettings.js';
 import { SessionAnalyticsSection } from './SessionAnalyticsSection.js';
+import { AnalysisTabs, type AnalysisView } from './AnalysisTabs.js';
 import type { DailyEntry, MetricMode, ModelBreakdown } from '../../shared/types.js';
 
 const C = ['#6F252A', '#AF8369', '#22222B', '#B8AA78', '#7E6B67', '#C09B86', '#945A61', '#7D8270'];
@@ -189,7 +190,7 @@ function filterProjectDaily(projects: Record<string, DailyEntry[]>, project: str
 
 /* ---- Main Dashboard ---- */
 
-export function Dashboard() {
+export function Dashboard({onViewChange}:{onViewChange:(view:AnalysisView)=>void}) {
   const refreshSeconds=useRefreshSeconds();
   const [agentsInfo, setAgentsInfo] = useState<AgentsResponse | null>(null);
   const [agentsLoading, setAgentsLoading] = useState(true);
@@ -601,7 +602,7 @@ export function Dashboard() {
         {renderSettingsModal()}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
+            <AnalysisTabs value="usage" onChange={onViewChange}/>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -631,7 +632,7 @@ export function Dashboard() {
       {renderSettingsModal()}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
+          <AnalysisTabs value="usage" onChange={onViewChange}/>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -661,7 +662,7 @@ export function Dashboard() {
       <div className="mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">{t("使用分析")}</h1>
+            <AnalysisTabs value="usage" onChange={onViewChange}/>
             <p className="text-[14px] font-medium text-stone-500 leading-relaxed">
               {t("Monitor token consumption, costs, and cache efficiency for your AI coding assistants.")}
             </p>

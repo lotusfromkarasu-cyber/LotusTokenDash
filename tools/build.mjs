@@ -3,6 +3,7 @@ import { build as vite } from '../source/app/node_modules/vite/dist/node/index.j
 import { cp, mkdir, writeFile, readFile, chmod } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const app = join(root, 'source/app');
 process.chdir(app);
@@ -15,6 +16,11 @@ await bundle({ ...common, entryPoints:[join(app,'src/server/codexResponseWorker.
 await writeFile(join(root,'build/package.json'), JSON.stringify({ name:'lotus-token-dash',version:JSON.parse(await readFile(join(app,'package.json'),'utf8')).version,type:'module' }));
 const platform = process.platform;
 const arch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+const rid = `${platform==='win32'?'win':platform==='darwin'?'osx':'linux'}-${process.arch==='arm64'?'arm64':'x64'}`;
+const speedProject=join(root,'source/agent-speed/windows/src/LotusSpeedBridge/LotusSpeedBridge.csproj');
+const speedBuild=spawnSync('dotnet',['publish',speedProject,'-c','Release','-r',rid,'--self-contained','true',
+  '-p:PublishSingleFile=true','-p:DebugType=None','-p:DebugSymbols=false','-o',join(root,'build/service')],{stdio:'inherit',windowsHide:true});
+if(speedBuild.status!==0)throw new Error(`Agent speed build failed: ${speedBuild.error??speedBuild.status}`);
 const triple = platform==='win32' ? `${arch}-pc-windows-msvc` : platform==='darwin' ? `${arch}-apple-darwin` : `${arch}-unknown-linux-gnu`;
 const binaries=join(root,'runtime/desktop'); await mkdir(binaries,{recursive:true});
 const binary=join(binaries,`lotus-node-${triple}${platform==='win32'?'.exe':''}`);

@@ -40,8 +40,9 @@ test('HUD discovers a second profile and shows its independently scoped usage', 
   await page.clock.runFor(30_100);
   await page.locator('.hud').hover();
   const select = page.getByLabel('Source', { exact: true });
-  await expect(select.locator('option[value="custom:custom"]')).toHaveCount(1);
-  await select.selectOption('custom:custom');
+  await select.click();
+  await expect(page.getByRole('option',{name:'custom'})).toHaveCount(1);
+  await page.getByRole('option',{name:'custom'}).click();
   await expect(page.locator('.daily')).toContainText('33K');
   await expect(page.locator('.daily')).toContainText('90.0%');
 });

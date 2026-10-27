@@ -13,6 +13,7 @@ export class HudLayoutController {
   private pending=0;
   private leave?:ReturnType<typeof setTimeout>;
   private dragging=false;
+  private held=false;
   private hovered=false;
   private disposed=false;
   constructor(public current:HudLayout,private command:Command,private changed:(next:HudLayout)=>void,private failed:(error:unknown)=>void) {}
@@ -49,11 +50,16 @@ export class HudLayoutController {
     this.hovered=open;
     if(this.dragging)return;
     if(open) {this.clearHover();if(!this.current.expanded)void this.update({expanded:true});}
-    else if(this.leave===undefined&&this.current.expanded)this.leave=setTimeout(()=>{
+    else if(!this.held&&this.leave===undefined&&this.current.expanded)this.leave=setTimeout(()=>{
       // Read the current intent. This callback never carries an old HUD mode.
       this.leave=undefined;
-      if(!this.dragging)void this.update({expanded:false});
+      if(!this.dragging&&!this.held)void this.update({expanded:false});
     },280);
+  }
+  hold(open:boolean) {
+    this.held=open;
+    if(open) {this.clearHover();if(!this.current.expanded)void this.update({expanded:true});}
+    else this.hover(this.hovered);
   }
   async drag(start:()=>Promise<void>) {
     if(this.dragging)return;

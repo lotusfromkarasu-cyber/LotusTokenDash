@@ -54,7 +54,10 @@ export class PricingStore {
   constructor(private path?: string, private request: typeof download = download, private now = Date.now) {
     this.snapshot = withCustomPricing(structuredClone(validate(seed)));
     if (path) {
-      try { this.snapshot = withCustomPricing(validate(JSON.parse(readFileSync(path, 'utf8')))); } catch { /* Bundled official snapshot supports offline first launch. */ }
+      try {
+        const saved=validate(JSON.parse(readFileSync(path, 'utf8')));
+        if (Date.parse(saved.fetchedAt) >= Date.parse(this.snapshot.fetchedAt)) this.snapshot=withCustomPricing(saved);
+      } catch { /* Bundled official snapshot supports offline first launch. */ }
     }
   }
   get revision(): string {

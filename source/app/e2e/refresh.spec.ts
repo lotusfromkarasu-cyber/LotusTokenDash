@@ -28,7 +28,8 @@ test('HUD interval changes synchronize through storage and leave drag controls w
   let today=0,quota=0;
   await page.route('**/api/lotus/**',route=>{
     const path=new URL(route.request().url()).pathname;
-    const json=path.endsWith('sources')?[{id:'openai',label:'OpenAI',sessions:1}]
+    const json=path.endsWith('speed')?{available:true,snapshot:null}
+      :path.endsWith('sources')?[{id:'openai',label:'OpenAI',sessions:1}]
       :path.endsWith('today')?(today++,{tokens:11000,cacheHitRate:60})
       :(quota++,{status:{state:'ok'},freshness:'live',windows:[]});
     return route.fulfill({json});

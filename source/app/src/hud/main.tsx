@@ -10,15 +10,11 @@ import { t, locale, useLanguage } from '../client/i18n.js';
 import { HudLayoutController, clampScale, type HudLayout } from './layout.js';
 import { Icon } from './Icon.js';
 import { useRefreshSeconds } from '../client/refresh.js';
-import { resetTime } from './resetTime.js';
+import { pace, resetTime } from './resetTime.js';
+import { formatSpeed, useSpeed } from '../client/speed.js';
 
 type Today = { tokens:number; cacheHitRate:number; fetchedAt:string };
 type Source = { id:string; label:string; sessions:number };
-export function pace(window: QuotaWindow | undefined, now = Date.now()) {
-  if (!window?.durationMins || !window.resetsAt) return undefined;
-  const reset=Date.parse(window.resetsAt);
-  return Number.isFinite(reset) ? Math.max(0, Math.min(100, 100 - (reset - now) / (window.durationMins * 600))) : undefined;
-}
 const number = (value:number) => new Intl.NumberFormat('en', { notation:'compact', maximumFractionDigits:1 }).format(value);
 function Bar({ label, window, remaining }: { label:string; window?:QuotaWindow;remaining:boolean }) {
   const ideal = pace(window);
@@ -41,12 +37,22 @@ function Hud() {
   const [error, setError] = useState('');
   const [quotaError, setQuotaError] = useState('');
   const [opening, setOpening] = useState(false);
+  const [sourceOpen,setSourceOpen]=useState(false);
+  const sourcePicker=useRef<HTMLDivElement>(null);
+  const speed=useSpeed();
   const [remaining,setRemaining]=useState(localStorage.getItem('lotus-quota-display')==='remaining');
   const [layout,changeLayout]=useState<HudLayout>({mode:'hud',expanded:false,scale:clampScale(Number(localStorage.getItem('lotus-scale')??1))});
   const [controller]=useState(()=>new HudLayoutController(layout,nativeCommand,next=>{
     changeLayout(next);localStorage.setItem('lotus-scale',String(next.scale));
   },error=>setError(String(error))));
   const {mode,expanded,scale}=layout;
+  useEffect(()=>{
+    if(!sourceOpen)return;
+    const close=(event:PointerEvent)=>{if(!sourcePicker.current?.contains(event.target as Node)){setSourceOpen(false);controller.hold(false);}};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setSourceOpen(false);controller.hold(false);}};
+    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+  },[sourceOpen,controller]);
   const refreshRef = useRef<() => void>(()=>{});
   useEffect(() => {
     const changed=()=>choose(getSource()); window.addEventListener('lotus-source-change',changed);
@@ -114,12 +120,14 @@ function Hud() {
   const five = windows.find(window=>window.durationMins===300);
   const week = windows.find(window=>window.durationMins===10080);
   const compact = mode==='strip' && !expanded;
+  const activeSource=sources.find(item=>item.id===source);
+  const speedValue=speed?.snapshot?.state==='Running'?speed.snapshot.live:undefined;
   const quotaSwitch=<button className="quota-switch" title={t(remaining?'Show used quota':'Show remaining quota')} aria-pressed={remaining} onClick={toggleQuota}>{t(compact?(remaining?'Left':'Used'):(remaining?'Remaining':'Usage'))}</button>;
   return <main style={{'--scale':scale} as React.CSSProperties} className={`hud ${compact?'thin':''} ${!expanded?'resting':''} ${mode==='strip'?'docked':''}`} onPointerDown={event=>void drag(event)} onPointerMove={event=>{if(event.buttons===0)controller.hover(true);}} onMouseEnter={()=>controller.hover(true)} onMouseLeave={()=>controller.hover(false)}>
     {!compact && <header><span className="brand-icon"><Icon name="lotus"/></span><b>LOTUS</b>{quotaSwitch}<span className="live" title={quotaError||quota?.status.message}><i/> {t(quotaError?'Disconnected':!quota?'Connecting':quota.freshness==='cached'?'Cached':'LIVE')}</span><div className="header-actions"><button className="icon-button" title={t('Open analysis')} aria-label={t('Open analysis')} disabled={opening} onClick={()=>void openDetails()}><Icon name="analysis"/></button><button className="icon-button" title={t('Hide to tray')} aria-label={t('Hide to tray')} onClick={()=>void nativeCommand('hide_hud')}><Icon name="tray"/></button></div></header>}
     <section className="bars"><Bar label="5h" window={five} remaining={remaining}/><Bar label="7d" window={week} remaining={remaining}/>{compact&&quotaSwitch}</section>
-    {!compact && <><section className="daily"><div><small>{t('Today tokens')}</small><strong>{today?number(today.tokens):'…'}</strong></div><div><small>{t('Cache hit')}</small><strong>{today?`${today.cacheHitRate.toFixed(1)}%`:'…'}</strong></div><button className="icon-button" title={t('Refresh usage')} aria-label={t('Refresh usage')} onClick={()=>window.dispatchEvent(new Event('lotus-refresh'))}><Icon name="refresh"/></button></section>
-      {expanded && <footer><label className="source-picker" data-no-drag><select aria-label={t('Source')} value={source} onChange={e=>{setSource(e.target.value);choose(e.target.value);}}>{sources.map(item=><option key={item.id} value={item.id}>{item.id==='openai'?t('OpenAI Official'):item.id==='unknown'?t('Unknown source'):item.label}</option>)}</select><span><Icon name="chevron"/></span></label><div className="hud-controls"><button className="dock-button" title={t(mode==='hud'?'Dock to top bar':'Restore floating HUD')} onClick={()=>void controller.mode(mode==='hud'?'strip':'hud')}><Icon name={mode==='hud'?'dock':'float'}/><span>{t(mode==='hud'?'Dock':'Float')}</span></button><div className="zoom-controls" aria-label={t('HUD size')}><button title={t('Decrease HUD size')} aria-label={t('Decrease HUD size')} disabled={scale<=.75} onClick={()=>void controller.scale(-.1)}><Icon name="minus"/></button><span>{Math.round(scale*100)}%</span><button title={t('Increase HUD size')} aria-label={t('Increase HUD size')} disabled={scale>=1.5} onClick={()=>void controller.scale(.1)}><Icon name="plus"/></button></div></div></footer>}
+    {!compact && <><section className="daily"><div><small>{t('Today tokens')}</small><strong>{today?number(today.tokens):'…'}</strong></div><div><small>{t('Cache hit')}</small><strong>{today?`${today.cacheHitRate.toFixed(1)}%`:'…'}</strong></div><div className="hud-speed" title={t('Live output speed of all detected agents')} aria-label={`${t('Live output speed')}: ${formatSpeed(speedValue)} tok/s`}><svg viewBox="0 0 104 40" aria-hidden="true"><path className="speed-track" d="M 12 35 A 40 40 0 0 1 92 35"/><path className="speed-fill" d="M 12 35 A 40 40 0 0 1 92 35" pathLength="100" strokeDasharray={`${Math.min(100,(speedValue??0)/3)} 100`}/></svg><span><b>{formatSpeed(speedValue)}</b><small>tok/s</small></span></div><button className="icon-button" title={t('Refresh usage')} aria-label={t('Refresh usage')} onClick={()=>window.dispatchEvent(new Event('lotus-refresh'))}><Icon name="refresh"/></button></section>
+      {expanded && <footer><div className="source-picker" ref={sourcePicker} data-no-drag><button className="source-trigger" role="combobox" aria-label={t('Source')} aria-expanded={sourceOpen} aria-controls="hud-source-options" onClick={()=>{const open=!sourceOpen;setSourceOpen(open);controller.hold(open);}}><span>{activeSource?.id==='openai'?t('OpenAI Official'):activeSource?.id==='unknown'?t('Unknown source'):activeSource?.label??source}</span><Icon name="chevron"/></button>{sourceOpen&&<div id="hud-source-options" className="source-options" role="listbox">{sources.map(item=><button key={item.id} role="option" aria-selected={item.id===source} onClick={()=>{setSource(item.id);choose(item.id);setSourceOpen(false);controller.hold(false);}}>{item.id==='openai'?t('OpenAI Official'):item.id==='unknown'?t('Unknown source'):item.label}</button>)}</div>}</div><div className="hud-controls"><button className="dock-button" title={t(mode==='hud'?'Dock to top bar':'Restore floating HUD')} onClick={()=>void controller.mode(mode==='hud'?'strip':'hud')}><Icon name={mode==='hud'?'dock':'float'}/><span>{t(mode==='hud'?'Dock':'Float')}</span></button><div className="zoom-controls" aria-label={t('HUD size')}><button title={t('Decrease HUD size')} aria-label={t('Decrease HUD size')} disabled={scale<=.75} onClick={()=>void controller.scale(-.1)}><Icon name="minus"/></button><span>{Math.round(scale*100)}%</span><button title={t('Increase HUD size')} aria-label={t('Increase HUD size')} disabled={scale>=1.5} onClick={()=>void controller.scale(.1)}><Icon name="plus"/></button></div></div></footer>}
       {error && <div className="error" role="status" title={error}>{error}</div>}{quotaError && <div className="error" title={quotaError}>{quotaError}</div>}</>}
   </main>;
 }

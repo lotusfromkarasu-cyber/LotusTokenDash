@@ -14,7 +14,7 @@ await mkdir(join(testDir,'app-data'),{recursive:true});
 const prices=JSON.parse(readFileSync(join(root,'source/app/src/data/openai-prices.json'),'utf8'));
 prices.checkedAt=new Date().toISOString();
 await writeFile(join(testDir,'app-data/openai-prices.json'),JSON.stringify(prices));
-const child=spawn(process.execPath,[process.argv[2]??join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
+const child=spawn(process.execPath,[process.argv[2]??join(root,'build/service/desktop.mjs')],{windowsHide:true,stdio:['pipe','pipe','pipe'],env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',LOTUS_SPEED_TEST_CODEX_ONLY:'1',CODEX_HOME:testDir,LOTUS_DATA_DIR:join(testDir,'app-data')}});
 let errors='';child.stderr.on('data',chunk=>{errors+=chunk.toString();});
 try {
   const address=await new Promise((resolve,reject)=>{
@@ -26,6 +26,14 @@ try {
   const anonymous=await fetch(`http://127.0.0.1:${address.port}/api/lotus/sources`);assert.equal(anonymous.status,401);
   const pricing=await request('pricing'); assert.ok(pricing.checkedAt);
   const groups=await request('lotus/sources');assert.deepEqual(groups.map(g=>g.id),['openai','custom:proxy','unknown']);
+  let speed;
+  for(let attempt=0;attempt<100;attempt++) {
+    speed=await request('lotus/speed');
+    if(speed.snapshot?.state==='Running')break;
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  assert.equal(speed.available,true);assert.equal(speed.snapshot?.state,'Running');
+  assert.ok(speed.snapshot.sources.some(source=>source.name==='Codex'&&source.available));
   const [official,custom,unknown]=await Promise.all(['openai','custom:proxy','unknown'].map(source=>request('lotus/today',source)));
   assert.equal(official.tokens,110);assert.equal(custom.tokens,310);assert.equal(unknown.tokens,80);assert.equal(official.cacheHitRate,60);assert.equal(custom.cacheHitRate,10);
   for(const source of ['openai','custom:proxy']) {

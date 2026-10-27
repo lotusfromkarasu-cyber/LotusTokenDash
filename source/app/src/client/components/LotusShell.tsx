@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Dashboard } from './Dashboard.js';
+import { SpeedAnalysis } from './SpeedAnalysis.js';
+import type { AnalysisView } from './AnalysisTabs.js';
+import { pace } from '../../hud/resetTime.js';
 import { getSource, setSource } from '../desktop.js';
 import type { QuotaSnapshot } from '../../server/quota/types.js';
 import { t, useLanguage, setLanguage, locale } from '../i18n.js';
@@ -13,6 +16,7 @@ export function LotusShell() {
   const [source, choose] = useState(getSource());
   const [quotas, setQuotas] = useState<QuotaSnapshot[]>([]);
   const [settings, showSettings] = useState(false);
+  const [analysis,setAnalysis]=useState<AnalysisView>('usage');
   const [error, setError] = useState('');
   useEffect(() => {
     const change=()=>choose(getSource()); window.addEventListener('lotus-source-change',change);
@@ -42,8 +46,9 @@ export function LotusShell() {
       <button className="lotus-button" onClick={() => showSettings(!settings)}>{t('Quota settings')}</button>
     </header>
     <div className="lotus-scope-note">{t('Codex sources are counted separately · Costs are model price estimates · Subscription quota uses the official API')}</div>
-    <section className="lotus-quotas" aria-label={t('Subscription quota')}>{quotas.map(quota => <article key={quota.provider}><strong>{quota.displayName}</strong><small>{quota.planName ?? quota.status.message ?? ''}</small>{quota.windows.map(window => <div key={window.id} className="lotus-quota-window"><span>{t(window.label)}</span><meter min="0" max="100" value={window.usedPercent} /><b>{window.usedPercent.toFixed(0)}%</b><small>{window.resetsAt ? new Date(window.resetsAt).toLocaleString(locale()) + ' '+t('Resets') : ''}</small></div>)}</article>)}</section>
+    <section className="lotus-quotas" aria-label={t('Subscription quota')}>{quotas.map(quota => <article key={quota.provider}><strong>{quota.displayName}</strong><small>{quota.planName ?? quota.status.message ?? ''}</small>{quota.windows.map((window,index) => <div key={window.id} className="lotus-quota-window"><span>{t(window.label)}</span><div className={`lotus-quota-track ${index%2?'weekly':''}`} role="progressbar" aria-label={t(window.label)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(window.usedPercent)}><i style={{width:`${Math.max(0,Math.min(100,window.usedPercent))}%`}}/>{pace(window)!==undefined&&<em style={{left:`${pace(window)}%`}}/>}</div><b>{window.usedPercent.toFixed(0)}%</b><small>{window.resetsAt ? new Date(window.resetsAt).toLocaleString(locale()) + ' '+t('Resets') : ''}</small></div>)}</article>)}</section>
     {settings && <form className="lotus-credential" onSubmit={event => void save(event)}><label>{t('Provider')}<select name="provider"><option value="glm">GLM</option><option value="minimax">MiniMax</option><option value="kimi">Kimi</option></select></label><label>API Token<input name="apiKey" type="password" autoComplete="off" placeholder={t('Leave empty and save to remove credentials')} /></label><label>{t('Base URL (optional)')}<input name="baseUrl" type="url" /></label><button className="lotus-button" type="submit">{t('Validate and save')}</button><span role="status">{t(error)}</span></form>}
-    <Dashboard key={source} />
+    <div hidden={analysis!=='usage'}><Dashboard key={source} onViewChange={setAnalysis}/></div>
+    {analysis==='speed'&&<SpeedAnalysis onViewChange={setAnalysis}/>}
   </>;
 }

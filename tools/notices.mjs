@@ -7,6 +7,9 @@ const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const app=join(root,'source/app');const modules=join(app,'node_modules');
 const seen=new Set();let text='# Third-party notices\n\nLotusTokenDash incorporates TokenDash under the MIT license.\n\n';
 text+=readFileSync(join(app,'LICENSE'),'utf8')+'\n\n';
+text+='\n---\n\n## Agent Speed\n\n'+readFileSync(join(root,'source/agent-speed/LICENSE'),'utf8')+'\n';
+text+='\n---\n\n## ZstdSharp.Port 0.8.8\n\n'+readFileSync(join(root,'source/agent-speed/ZSTDSHARP-LICENSE'),'utf8')+'\n';
+text+='\n---\n\n## .NET runtime\n\n'+readFileSync(join(root,'source/agent-speed/DOTNET-LICENSE.txt'),'utf8')+'\n'+readFileSync(join(root,'source/agent-speed/DOTNET-THIRD-PARTY.txt'),'utf8')+'\n';
 function collect(name,parent=app) {
   let directory=join(parent,'node_modules',name);
   if(!existsSync(join(directory,'package.json'))) directory=join(modules,name);

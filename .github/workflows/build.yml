@@ -36,6 +36,10 @@ jobs:
         if: steps.select.outputs.build == 'true'
         with:
           node-version: '24'
+      - uses: actions/setup-dotnet@v4
+        if: steps.select.outputs.build == 'true'
+        with:
+          dotnet-version: '10.0.x'
       - uses: dtolnay/rust-toolchain@stable
         if: steps.select.outputs.build == 'true'
       - uses: Swatinem/rust-cache@v2
@@ -57,6 +61,9 @@ jobs:
       - name: Desktop package
         if: steps.select.outputs.build == 'true'
         run: node tools/smoke.mjs
+      - name: Agent speed integration
+        if: steps.select.outputs.build == 'true'
+        run: node tools/speed-smoke.mjs
       - name: Native desktop package
         if: steps.select.outputs.build == 'true'
         env:
@@ -80,12 +87,12 @@ jobs:
           Copy-Item 'LICENSE','README.md' $portable
           node tools/native-smoke.mjs (Join-Path $portable 'LotusTokenDash.exe')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.7-Windows-x64-portable.zip'
+          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.8-Windows-x64-portable.zip'
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && runner.os == 'Windows'
         with:
           name: LotusTokenDash-Windows-portable
-          path: build/LotusTokenDash-0.1.7-Windows-x64-portable.zip
+          path: build/LotusTokenDash-0.1.8-Windows-x64-portable.zip
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && always()
         with:

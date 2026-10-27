@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "source": "https://developers.openai.com/api/docs/pricing.md",
-  "fetchedAt": "2026-10-03T08:08:00.685Z",
+  "fetchedAt": "2026-10-27T06:36:25.418Z",
   "checkedAt": null,
-  "etag": "W/\"3f23fe56cb8414a30a7ff3cfe2919229\"",
+  "etag": "W/\"d8a3f57fae394d714c07f56e84ff0c88\"",
   "models": {
     "gpt-6-astra": {
       "inputPer1M": 10,
@@ -20,6 +20,14 @@
       "longContextInputPer1M": 4,
       "longContextCachedInputPer1M": 0.2,
       "longContextOutputPer1M": 15
+    },
+    "gpt-6.1-terra": {
+      "inputPer1M": 1,
+      "cachedInputPer1M": 0.05,
+      "outputPer1M": 5,
+      "longContextInputPer1M": 2,
+      "longContextCachedInputPer1M": 0.1,
+      "longContextOutputPer1M": 7.5
     },
     "gpt-6-luna": {
       "inputPer1M": 0.1,
@@ -85,6 +93,14 @@
       "longContextCachedInputPer1M": 0.5,
       "longContextOutputPer1M": 22.5
     },
+    "gpt-5.4-pro": {
+      "inputPer1M": 30,
+      "cachedInputPer1M": null,
+      "outputPer1M": 180,
+      "longContextInputPer1M": 60,
+      "longContextCachedInputPer1M": null,
+      "longContextOutputPer1M": 270
+    },
     "gpt-5.4-mini": {
       "inputPer1M": 0.75,
       "cachedInputPer1M": 0.075,
@@ -94,14 +110,6 @@
       "inputPer1M": 0.2,
       "cachedInputPer1M": 0.02,
       "outputPer1M": 1.25
-    },
-    "gpt-5.4-pro": {
-      "inputPer1M": 30,
-      "cachedInputPer1M": null,
-      "outputPer1M": 180,
-      "longContextInputPer1M": 60,
-      "longContextCachedInputPer1M": null,
-      "longContextOutputPer1M": 270
     },
     "gpt-5.2": {
       "inputPer1M": 1.75,
@@ -217,26 +225,6 @@
       "inputPer1M": 0.5,
       "cachedInputPer1M": null,
       "outputPer1M": 1.5
-    },
-    "gpt-3.5-turbo-1106": {
-      "inputPer1M": 1,
-      "cachedInputPer1M": null,
-      "outputPer1M": 2
-    },
-    "gpt-3.5-turbo-instruct": {
-      "inputPer1M": 1.5,
-      "cachedInputPer1M": null,
-      "outputPer1M": 2
-    },
-    "davinci-002": {
-      "inputPer1M": 2,
-      "cachedInputPer1M": null,
-      "outputPer1M": 2
-    },
-    "babbage-002": {
-      "inputPer1M": 0.4,
-      "cachedInputPer1M": null,
-      "outputPer1M": 0.4
     }
   },
   "longContextThreshold": 272000,

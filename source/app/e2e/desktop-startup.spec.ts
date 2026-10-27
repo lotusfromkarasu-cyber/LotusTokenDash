@@ -45,7 +45,8 @@ test('quota failures show a disconnected state and refresh retries both data str
   let requests=0;
   await page.route('**/api/lotus/**',async route=>{
     const path=new URL(route.request().url()).pathname;
-    if(path.endsWith('sources'))await route.fulfill({json:[{id:'openai',label:'OpenAI 官方',sessions:1}]});
+    if(path.endsWith('speed'))await route.fulfill({json:{available:true,snapshot:null}});
+    else if(path.endsWith('sources'))await route.fulfill({json:[{id:'openai',label:'OpenAI 官方',sessions:1}]});
     else if(path.endsWith('today'))await route.fulfill({json:{tokens:11000,cacheHitRate:60}});
     else if(++requests===1)await route.fulfill({status:500,json:{error:'unavailable'}});
     else await route.fulfill({json:{status:{state:'ok'},freshness:'live',windows:[{durationMins:300,usedPercent:25},{durationMins:10080,usedPercent:40}]}});

@@ -31,7 +31,8 @@ test('HUD keeps both quota windows, source-specific today stats and hover strip 
   await page.goto('/hud.html');await expect(page.locator('.daily')).toContainText('11K'); await expect(page.locator('.daily')).toContainText('60.0%');
   const fits=await page.locator('.hud').evaluate(node=>{const box=node.getBoundingClientRect();const daily=node.querySelector('.daily')!.getBoundingClientRect();return daily.bottom<=box.bottom;});expect(fits).toBe(true);
   await page.locator('.hud').hover(); await expect(page.getByLabel('Source',{exact:true})).toBeVisible();
-  await page.getByLabel('Source',{exact:true}).selectOption('custom:proxy'); await expect(page.locator('.daily')).toContainText('22K');await expect(page.locator('.daily')).toContainText('20.0%');
+  await page.getByLabel('Source',{exact:true}).click();
+  await page.getByRole('option',{name:'proxy'}).click(); await expect(page.locator('.daily')).toContainText('22K');await expect(page.locator('.daily')).toContainText('20.0%');
   await page.getByTitle('Dock to top bar').click(); await expect(page.locator('.hud')).toHaveClass(/thin/);
   await expect(page.locator('.quota-row')).toHaveCount(2);
   await page.mouse.move(600,400);await page.locator('.hud').hover();await expect(page.getByLabel('Source',{exact:true})).toBeVisible();

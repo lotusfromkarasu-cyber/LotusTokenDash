@@ -85,6 +85,15 @@ describe('HUD user interactions',()=>{
     await vi.advanceTimersByTimeAsync(150);
     expect(displayed().expanded).toBe(false);
   });
+  it('keeps a docked bar expanded while its source menu is open',async()=>{
+    vi.useFakeTimers();
+    const {instance,displayed}=controller();
+    await instance.mode('strip');instance.hover(true);instance.hold(true);instance.hover(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(displayed().expanded).toBe(true);
+    instance.hold(false);await vi.advanceTimersByTimeAsync(300);
+    expect(displayed().expanded).toBe(false);
+  });
   it('a stale native hover cannot reopen a newer collapsed layout',async()=>{
     const {instance,displayed}=controller();
     instance.receive({mode:'strip',scale:1,revision:5});

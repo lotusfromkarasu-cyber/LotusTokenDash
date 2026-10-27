@@ -72,7 +72,7 @@ test('HUD provider arrow moves left and independent size buttons preserve scale'
   await page.locator('.hud').hover();
   await expect(page.getByTitle('Increase HUD size')).toBeVisible();
   const hud=await page.locator('.hud').boundingBox();
-  const arrow=await page.locator('.source-picker>span').boundingBox();
+  const arrow=await page.locator('.source-picker svg').boundingBox();
   expect(arrow!.x).toBeLessThan(hud!.x+hud!.width-120);
   await page.getByTitle('Increase HUD size').click();
   await expect.poll(async()=> (await page.locator('.hud').boundingBox())!.width).toBeCloseTo(356.4,1);

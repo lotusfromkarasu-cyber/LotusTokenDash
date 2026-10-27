@@ -19,6 +19,8 @@ HUD 和顶部细条直接显示官方 5h / 7d 重置时间，格式为本机时�
 ## 功能
 
 - 悬浮 HUD：5h / 7day 用量或余量、重置时间、理想使用进度标线、今日 token、缓存命中率。
+- HUD 中的速率仪表和“Agent 速率”分析页采用 Agent Speed 的本地计速核心，显示实时输出速率、实测／估算、活跃 Agent、各来源及每日历史。
+- 速率显示所有已检测 Agent 的合计，Codex 支持已配置的多个会话目录；顶部 Codex 来源选择仍只控制原有用量分析。
 - 拖到显示器顶部自动变为细条，悬停展开；可缩放、隐藏到托盘、恢复位置。
 - Windows 原生拖动后用窗口位置补足缺失的悬停事件；移动细条后仍可展开。位置检测仅针对可见细条，事件只在状态变化时发送。
 - Codex 官方与各 custom provider 独立分组，HUD 来源可切换。
@@ -35,7 +37,7 @@ Codex 金额使用 OpenAI 当前 Standard 单价估算，官方和 custom 中的
 
 ## 开发
 
-需要 Node 24、Rust 和对应系统的 Tauri 构建依赖。
+需要 Node 24、.NET 10 SDK、Rust 和对应系统的 Tauri 构建依赖。发行包包含自带运行时的速率组件，使用者无需另装 .NET。
 
 ```sh
 node tools/tasks.mjs install
@@ -51,3 +53,5 @@ Windows 启动时自动识别正在运行的 Codex 多实例，将独立会话�
 首次运行读取本机的会话目录和 Codex 登录状态。个人会话、登录文件、API token 和使用量索引不会提交到仓库。应用设置独立存放在系统应用数据目录。来源无法确认的历史日志单独展示。
 
 上游与口径说明见 [docs/UPSTREAM.md](docs/UPSTREAM.md)。
+
+Agent Speed 核心来自 [zoefix/agent-speed](https://github.com/zoefix/agent-speed)，基于 MIT 协议；集成版本及本地适配见 `source/agent-speed/`。速率为输出 Token 除以请求耗时，生成中的数值可能是估算，完成后由实测修正。历史记录保存在 LotusTokenDash 自身数据目录。

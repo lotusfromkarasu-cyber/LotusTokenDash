@@ -11,6 +11,7 @@ import { currentProvider, providerScope } from './providerScope.js';
 import { closeCodexWorker, getCodexResponse } from './codexResponseService.js';
 import { quotaService } from './quota/index.js';
 import type { QuotaProviderId } from './quota/types.js';
+import { stopSpeedService } from './speedService.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.LOTUS_DATA_DIR ?? join(homedir(), '.lotus-token-dash');
@@ -85,7 +86,7 @@ const server = app.listen(0, '127.0.0.1', () => {
   const address = server.address();
   if (address && typeof address !== 'string') process.stdout.write(JSON.stringify({ port: address.port, token }) + '\n');
 });
-function shutdown() { stopPricingSync(); server.close(); closeCodexWorker(); process.exit(0); }
+function shutdown() { stopPricingSync(); stopSpeedService(); server.close(); closeCodexWorker(); process.exit(0); }
 process.stdin.resume();
 process.stdin.on('end', shutdown);
 process.on('SIGTERM', shutdown);

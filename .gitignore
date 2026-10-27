@@ -8,6 +8,8 @@ source/app/playwright-report/
 source/desktop/binaries/
 source/desktop/target/
 source/desktop/resources/
+source/agent-speed/**/bin/
+source/agent-speed/**/obj/
 *.log
 .env
 *.pdb
