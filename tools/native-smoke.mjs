@@ -20,7 +20,8 @@ try {
   for(let launch=1;launch<=2;launch++) {
     const data=join(directory,'app-data');
     await rm(join(data,'native-result.json'),{force:true});
-    const child=spawn(executable,['--self-test'],{windowsHide:true,stdio:'ignore',env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',CODEX_HOME:directory,LOTUS_TEST_DATA_DIR:data}});
+    // Isolate WebView localStorage as well as service files from the user's HUD.
+    const child=spawn(executable,['--self-test'],{windowsHide:true,stdio:'ignore',env:{...process.env,TOKENDASH_DISABLE_PROFILE_DISCOVERY:'1',CODEX_HOME:directory,LOTUS_TEST_DATA_DIR:data,WEBVIEW2_USER_DATA_FOLDER:join(directory,'webview')}});
     const exit=await new Promise((accept,reject)=>{
       const timer=setTimeout(()=>{child.kill();reject(new Error('Native smoke test timed out'));},90_000);
       child.once('error',error=>{clearTimeout(timer);reject(error);});
@@ -35,5 +36,5 @@ try {
   }
 } finally {
   assert.ok(directory.startsWith(join(root,'build/native-smoke-')));
-  await rm(directory,{recursive:true,force:true});
+  await rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200});
 }
