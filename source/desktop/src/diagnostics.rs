@@ -79,7 +79,7 @@ pub fn run(app:tauri::AppHandle) {
                 let revision=app.state::<super::Service>().layout_revision.load(std::sync::atomic::Ordering::SeqCst);
                 app.emit_to("hud","lotus-hover",serde_json::json!({"inside":false,"revision":revision})).map_err(|e|e.to_string())?;
                 hud.eval("(()=>{const closing=setInterval(()=>{if(document.querySelector('.hud.thin')){clearInterval(closing);window.__TAURI_INTERNALS__.invoke('renderer_status',{stage:'hover-collapsed'});}},50);})()").map_err(|e|e.to_string())?;
-                wait(&app,"hud","hover-collapsed",3+index*2).await?;
+                wait(&app,"hud","hover-collapsed",round).await?;
             }
             // Verify all four real native anchors and hover expansion directions.
             // Windows stay hidden; the user's mouse and settings are untouched.
@@ -97,7 +97,7 @@ pub fn run(app:tauri::AppHandle) {
                 let round=index+3;
                 let edge_name=serde_json::to_string(&edge).unwrap();
                 hud.eval(format!("(()=>{{const check=setInterval(()=>{{if(document.querySelector('.hud.thin[data-edge='+{edge_name}+']')){{clearInterval(check);window.__TAURI_INTERNALS__.invoke('renderer_status',{{stage:'hover-collapsed'}});}}}},50);}})()").as_str()).map_err(|e|e.to_string())?;
-                wait(&app,"hud","hover-collapsed",round).await?;
+                wait(&app,"hud","hover-collapsed",3+index*2).await?;
                 let revision=app.state::<super::Service>().layout_revision.load(std::sync::atomic::Ordering::SeqCst);
                 app.emit_to("hud","lotus-hover",serde_json::json!({"inside":true,"revision":revision})).map_err(|e|e.to_string())?;
                 hud.eval("(()=>{const check=setInterval(()=>{if(document.querySelector('.hud.docked:not(.thin)')){clearInterval(check);window.__TAURI_INTERNALS__.invoke('renderer_status',{stage:'hover-expanded'});}},50);})()").map_err(|e|e.to_string())?;
