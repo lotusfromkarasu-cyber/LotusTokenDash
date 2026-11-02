@@ -32,7 +32,7 @@ export const zh: Record<string,string> = {
   'Usage':'用量', 'Remaining':'余量', 'Show remaining quota':'显示剩余额度', 'Show used quota':'显示已用额度',
   'Today tokens':'今日 Token', 'Cache hit':'缓存命中率', 'Source':'统计来源', 'LIVE':'实时', 'Cached':'缓存',
   'Connecting':'连接中', 'Disconnected':'未连接', 'Open analysis':'打开完整分析窗口', 'Hide to tray':'隐藏到托盘',
-  'Refresh usage':'刷新统计', 'Dock to top bar':'吸附顶部细条', 'Restore floating HUD':'恢复悬浮 HUD',
+  'Refresh usage':'刷新统计', 'Dock to top bar':'吸附顶部细条', 'Dock to screen edge':'吸附屏幕边缘', 'Restore floating HUD':'恢复悬浮 HUD',
   'Increase HUD size':'放大 HUD', 'Decrease HUD size':'缩小 HUD', 'HUD size':'HUD 尺寸', 'Dock':'吸附', 'Float':'释放', 'Official quota unavailable':'官方配额暂不可用',
   'Quota request failed ({status})':'配额读取失败（{status}）', 'Usage request failed ({status})':'统计读取失败（{status}）',
   'Cannot open analysis: {error}':'分析窗口打开失败：{error}', 'Quota window unavailable':'官方接口尚未提供此窗口',

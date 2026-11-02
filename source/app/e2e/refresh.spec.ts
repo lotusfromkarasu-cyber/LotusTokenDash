@@ -53,7 +53,7 @@ test('HUD interval changes synchronize through storage and leave drag controls w
   await expect.poll(()=>today).toBeGreaterThan(paused[0]);
   await expect.poll(()=>quota).toBeGreaterThan(paused[1]);
   await page.locator('.hud').hover();
-  await page.getByTitle('Dock to top bar').click();
+  await page.getByTitle('Dock to screen edge').click();
   await expect(page.locator('.hud')).toHaveClass(/thin/);
   await page.mouse.move(600,400);await page.locator('.hud').hover();
   await expect(page.getByTitle('Restore floating HUD')).toBeVisible();

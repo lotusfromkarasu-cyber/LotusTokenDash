@@ -24,8 +24,8 @@ async function expectFits(page:Page) {
 }
 
 for(const config of [
-  {language:'zh',zone:'Asia/Shanghai',expected:['10/03 02:30','10/07 00:05'],toggle:'显示剩余额度',dock:'吸附顶部细条'},
-  {language:'en',zone:'America/Los_Angeles',expected:['10/02 11:30','10/06 09:05'],toggle:'Show remaining quota',dock:'Dock to top bar'},
+  {language:'zh',zone:'Asia/Shanghai',expected:['10/03 02:30','10/07 00:05'],toggle:'显示剩余额度',dock:'吸附屏幕边缘'},
+  {language:'en',zone:'America/Los_Angeles',expected:['10/02 11:30','10/06 09:05'],toggle:'Show remaining quota',dock:'Dock to screen edge'},
 ]) {
   test.describe(`${config.language} reset times`,()=>{
     test.use({timezoneId:config.zone});

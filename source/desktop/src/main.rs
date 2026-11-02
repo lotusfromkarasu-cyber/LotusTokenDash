@@ -6,17 +6,18 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState}
 use serde::{Serialize, Deserialize};
 mod diagnostics;
 mod pointer;
+mod dock;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Address { port: u16, token: String }
 #[derive(Clone, Serialize, Deserialize)]
-struct Layout { mode: String, scale: f64, x: i32, y: i32, #[serde(default="enabled")] topmost: bool }
+struct Layout { mode: String, scale: f64, x: i32, y: i32, #[serde(default="enabled")] topmost: bool, #[serde(default)] edge:dock::Edge }
 #[derive(Clone, Serialize)]
 struct LayoutSnapshot { #[serde(flatten)] layout:Layout, revision:u64 }
 #[derive(Serialize)]
 struct DragTicket {revision:u64, #[serde(rename="waitsForRelease")] waits_for_release:bool}
 fn enabled() -> bool { true }
-impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true } } }
+impl Default for Layout { fn default() -> Self { Self { mode: "hud".into(), scale: 1.0, x:80, y:80, topmost:true, edge:dock::Edge::Top } } }
 struct Service {
     address: Arc<Mutex<Option<Result<Address, String>>>>,
     child: Mutex<Option<Child>>,
@@ -56,21 +57,30 @@ fn apply_layout(app: &tauri::AppHandle, mode: String, expanded: bool, scale: f64
     layout.mode = if mode == "strip" { "strip".into() } else { "hud".into() };
     layout.scale = scale.clamp(0.75, 1.5);
     let strip = layout.mode == "strip";
-    let (width, height) = if strip && !expanded { (324.0,20.0) } else if !expanded { (324.0,142.0) } else { (324.0,176.0) };
+    let (width,height)=dock::size(strip,expanded,layout.edge);
     let old_size = window.outer_size().map_err(|e|e.to_string())?;
     let mut position = window.outer_position().map_err(|e|e.to_string())?;
     let monitor = window.current_monitor().map_err(|e|e.to_string())?;
     let factor = window.scale_factor().map_err(|e|e.to_string())?;
-    position.x += ((old_size.width as f64 - width * layout.scale * factor)/2.0).round() as i32;
     if let Some(monitor) = monitor {
-        if strip { position.y = monitor.position().y; }
-        else if was_strip { position.y = monitor.position().y + (48.0 * factor).round() as i32; }
+        let area=monitor.work_area();
+        let screen=dock::Rect{x:area.position.x,y:area.position.y,width:area.size.width as i32,height:area.size.height as i32};
+        if strip||was_strip {
+            let old=dock::Rect{x:position.x,y:position.y,width:old_size.width as i32,height:old_size.height as i32};
+            let (x,y)=dock::anchor(old,screen,(width*layout.scale*factor).round()as i32,(height*layout.scale*factor).round()as i32,
+                layout.edge,if strip{0}else{(48.0*factor).round()as i32});
+            position=PhysicalPosition::new(x,y);
+        } else {
+            position.x+=((old_size.width as f64-width*layout.scale*factor)/2.0).round()as i32;
+            position.x=position.x.clamp(screen.x,screen.x+(screen.width-(width*layout.scale*factor).round()as i32).max(0));
+            position.y=position.y.clamp(screen.y,screen.y+(screen.height-(height*layout.scale*factor).round()as i32).max(0));
+        }
     }
     window.set_size(LogicalSize::new(width * layout.scale, height * layout.scale)).map_err(|e|e.to_string())?;
     window.set_position(position).map_err(|e|e.to_string())?;
     {
         let mut stored=state.layout.lock().map_err(|e|e.to_string())?;
-        stored.mode=layout.mode;stored.scale=layout.scale;stored.x=position.x;stored.y=position.y;
+        stored.mode=layout.mode;stored.scale=layout.scale;stored.x=position.x;stored.y=position.y;stored.edge=layout.edge;
     }
     save_layout(app);
     let snapshot=LayoutSnapshot {layout:state.layout.lock().map_err(|e|e.to_string())?.clone(),revision};
@@ -118,18 +128,31 @@ async fn finish_drag(app: tauri::AppHandle, revision:u64) -> Result<LayoutSnapsh
 fn finish_drag_layout(app:&tauri::AppHandle, revision:u64) -> Result<LayoutSnapshot,String> {
     let window = app.get_webview_window("hud").ok_or("HUD unavailable")?;
     let position = window.outer_position().map_err(|e|e.to_string())?;
+    let size=window.outer_size().map_err(|e|e.to_string())?;
     let monitor = window.current_monitor().map_err(|e|e.to_string())?;
     let factor = window.scale_factor().map_err(|e|e.to_string())?;
     let state = app.state::<Service>();
     let scale = state.layout.lock().map_err(|e|e.to_string())?.scale;
-    let snap = monitor.as_ref().map(|monitor| position.y <= monitor.position().y + (28.0 * factor) as i32).unwrap_or(false);
-    let mode = if snap { "strip" } else { "hud" };
+    let edge=monitor.as_ref().and_then(|monitor|{
+        let area=monitor.work_area();
+        dock::nearest(dock::Rect{x:position.x,y:position.y,width:size.width as i32,height:size.height as i32},
+            dock::Rect{x:area.position.x,y:area.position.y,width:area.size.width as i32,height:area.size.height as i32},(28.0*factor)as i32)
+    });
+    if let Some(edge)=edge {state.layout.lock().map_err(|e|e.to_string())?.edge=edge;}
+    else {state.layout.lock().map_err(|e|e.to_string())?.mode="hud".into();}
+    let mode = if edge.is_some() { "strip" } else { "hud" };
     apply_layout(app, mode.into(), false, scale,revision)?;
     if let Some(monitor) = monitor {
         let size = window.outer_size().map_err(|e|e.to_string())?;
-        let center = monitor.position().x + (monitor.size().width as i32 - size.width as i32)/2;
+        let vertical=edge.map(|edge|edge.vertical()).unwrap_or(false);
+        let area=monitor.work_area();
+        let center=if vertical{area.position.y+(area.size.height as i32-size.height as i32)/2}
+            else{area.position.x+(area.size.width as i32-size.width as i32)/2};
         let now = window.outer_position().map_err(|e|e.to_string())?;
-        if (now.x - center).abs() < (48.0 * factor) as i32 { let _ = window.set_position(PhysicalPosition::new(center, now.y)); }
+        let coordinate=if vertical{now.y}else{now.x};
+        if (coordinate-center).abs() < (48.0*factor)as i32 {
+            let _=window.set_position(if vertical{PhysicalPosition::new(now.x,center)}else{PhysicalPosition::new(center,now.y)});
+        }
     }
     let now = window.outer_position().map_err(|e|e.to_string())?;
     { let mut layout = state.layout.lock().map_err(|e|e.to_string())?; layout.x=now.x; layout.y=now.y; }
@@ -222,7 +245,7 @@ fn main() {
             let topmost = CheckMenuItem::with_id(app,"topmost","始终置顶",true,true,None::<&str>)?;
             let topmost_check=topmost.clone();
             let details = MenuItem::with_id(app,"details","打开详细分析",true,None::<&str>)?;
-            let strip = MenuItem::with_id(app,"strip","顶部吸附细条",true,None::<&str>)?;
+            let strip = MenuItem::with_id(app,"strip","贴边细条（可拖至四边）",true,None::<&str>)?;
             let hud = MenuItem::with_id(app,"hud","悬浮 HUD",true,None::<&str>)?;
             let quit = MenuItem::with_id(app,"quit","退出",true,None::<&str>)?;
             let menu = Menu::with_items(app,&[&show,&hide,&details,&refresh,&strip,&hud,&topmost,&quit])?;

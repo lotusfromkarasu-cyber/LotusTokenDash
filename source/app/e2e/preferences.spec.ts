@@ -87,13 +87,13 @@ test('restoring and redocking remains docked after the previous hover timeout',a
   await page.goto('/hud.html');
   for(let cycle=0;cycle<3;cycle++) {
     await page.locator('.hud').hover();
-    await page.getByTitle('Dock to top bar').click();
+    await page.getByTitle('Dock to screen edge').click();
     await page.mouse.move(600,400);
     await page.locator('.hud').hover();
     await page.getByTitle('Restore floating HUD').click();
     await page.mouse.move(600,400);
     await page.locator('.hud').hover();
-    await page.getByTitle('Dock to top bar').click();
+    await page.getByTitle('Dock to screen edge').click();
     await page.mouse.move(600,400);
     await expect(page.locator('.hud')).toHaveClass(/docked/);
     await expect(page.locator('.hud')).toHaveClass(/thin/);

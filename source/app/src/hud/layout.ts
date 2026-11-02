@@ -1,6 +1,7 @@
 export type HudMode='hud'|'strip';
-export type HudLayout={mode:HudMode;expanded:boolean;scale:number};
-type NativeLayout={mode:HudMode;scale:number;revision?:number};
+export type DockEdge='top'|'bottom'|'left'|'right';
+export type HudLayout={mode:HudMode;expanded:boolean;scale:number;edge?:DockEdge};
+type NativeLayout={mode:HudMode;scale:number;revision?:number;edge?:DockEdge};
 type DragTicket={revision:number;waitsForRelease:boolean};
 type Command=(name:string,args?:Record<string,unknown>)=>Promise<unknown>;
 export const clampScale=(value:number)=>Number.isFinite(value)?Math.max(.75,Math.min(1.5,value)):1;
@@ -29,7 +30,7 @@ export class HudLayoutController {
   private restore(value:NativeLayout|undefined) {
     if(!value||!['hud','strip'].includes(value.mode)||(value.revision??0)<this.nativeRevision)return;
     this.nativeRevision=value.revision??this.nativeRevision;
-    this.publish({mode:value.mode,scale:clampScale(value.scale??this.current.scale),expanded:value.mode===this.current.mode?this.current.expanded:false});
+    this.publish({mode:value.mode,scale:clampScale(value.scale??this.current.scale),edge:value.edge??this.current.edge,expanded:value.mode===this.current.mode?this.current.expanded:false});
   }
   private update(patch:Partial<HudLayout>) {
     this.clearHover();

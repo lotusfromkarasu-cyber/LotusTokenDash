@@ -46,7 +46,7 @@ test('docked source menu stays open while the pointer leaves before selecting',a
   });
   await page.setViewportSize({width:500,height:300});await page.goto('/hud.html');
   await expect(page.locator('.hud-speed')).toContainText('42');
-  await page.locator('.hud').hover();await page.getByTitle('Dock to top bar').click();
+  await page.locator('.hud').hover();await page.getByTitle('Dock to screen edge').click();
   await page.mouse.move(450,250);await page.locator('.hud').hover();
   await page.getByLabel('Source',{exact:true}).click();
   await page.mouse.move(450,250);await page.waitForTimeout(500);

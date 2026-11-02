@@ -69,6 +69,11 @@ jobs:
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
         run: node tools/tasks.mjs desktop --bundles ${{ matrix.bundles }}
+      - name: Dock geometry tests
+        if: steps.select.outputs.build == 'true'
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/build/rust-target
+        run: cargo test --release --manifest-path source/desktop/Cargo.toml
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true'
         with:
@@ -87,12 +92,12 @@ jobs:
           Copy-Item 'LICENSE','README.md' $portable
           node tools/native-smoke.mjs (Join-Path $portable 'LotusTokenDash.exe')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.8-Windows-x64-portable.zip'
+          Compress-Archive -Path $portable -DestinationPath 'build/LotusTokenDash-0.1.9-Windows-x64-portable.zip'
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && runner.os == 'Windows'
         with:
           name: LotusTokenDash-Windows-portable
-          path: build/LotusTokenDash-0.1.8-Windows-x64-portable.zip
+          path: build/LotusTokenDash-0.1.9-Windows-x64-portable.zip
       - uses: actions/upload-artifact@v4
         if: steps.select.outputs.build == 'true' && always()
         with:

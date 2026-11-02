@@ -8,6 +8,15 @@ function controller(command=vi.fn(async()=>undefined)) {
 }
 afterEach(()=>vi.useRealTimers());
 describe('HUD user interactions',()=>{
+  it.each(['top','bottom','left','right'] as const)('preserves the %s dock during hover and scaling',async edge=>{
+    const command=vi.fn(async(_name:string,args?:Record<string,unknown>)=>({...args,edge,revision:2}));
+    const {instance,displayed}=controller(command as never);
+    instance.receive({mode:'strip',scale:1,edge,revision:1});
+    instance.hover(true);
+    await vi.waitFor(()=>expect(displayed()).toMatchObject({mode:'strip',edge,expanded:true}));
+    await instance.scale(.1);
+    expect(displayed()).toMatchObject({edge,scale:1.1});
+  });
   it('a queued mouseleave cannot undo a redock after releasing the bar',async()=>{
     vi.useFakeTimers();
     const {instance,displayed,command}=controller();
