@@ -18,6 +18,13 @@ pub fn nearest(window:Rect, screen:Rect, threshold:i32)->Option<Edge> {
      (Edge::Right,(window.x+window.width-screen.x-screen.width).abs())]
         .into_iter().filter(|(_,distance)|*distance<=threshold).min_by_key(|(_,distance)|*distance).map(|(edge,_)|edge)
 }
+pub fn nearest_cursor(point:(i32,i32),screen:Rect,threshold:i32)->Option<Edge> {
+    [(Edge::Top,(point.1-screen.y).abs()),
+     (Edge::Bottom,(point.1-(screen.y+screen.height)).abs()),
+     (Edge::Left,(point.0-screen.x).abs()),
+     (Edge::Right,(point.0-(screen.x+screen.width)).abs())]
+        .into_iter().filter(|(_,distance)|*distance<=threshold).min_by_key(|(_,distance)|*distance).map(|(edge,_)|edge)
+}
 pub fn anchor(old:Rect, screen:Rect, width:i32, height:i32, edge:Edge, inset:i32)->(i32,i32) {
     let (x,y)=match edge {
         Edge::Top=>(old.x+(old.width-width)/2,screen.y+inset),

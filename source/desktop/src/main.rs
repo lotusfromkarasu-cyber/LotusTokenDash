@@ -129,14 +129,21 @@ fn finish_drag_layout(app:&tauri::AppHandle, revision:u64) -> Result<LayoutSnaps
     let window = app.get_webview_window("hud").ok_or("HUD unavailable")?;
     let position = window.outer_position().map_err(|e|e.to_string())?;
     let size=window.outer_size().map_err(|e|e.to_string())?;
-    let monitor = window.current_monitor().map_err(|e|e.to_string())?;
+    let cursor=window.cursor_position().ok().map(|point|(point.x.round() as i32,point.y.round() as i32));
+    let current_monitor=window.current_monitor().map_err(|e|e.to_string())?;
+    let monitor=cursor.and_then(|(x,y)|window.monitor_from_point(x as f64,y as f64).ok().flatten()).or(current_monitor);
     let factor = window.scale_factor().map_err(|e|e.to_string())?;
     let state = app.state::<Service>();
     let scale = state.layout.lock().map_err(|e|e.to_string())?.scale;
     let edge=monitor.as_ref().and_then(|monitor|{
         let area=monitor.work_area();
-        dock::nearest(dock::Rect{x:position.x,y:position.y,width:size.width as i32,height:size.height as i32},
-            dock::Rect{x:area.position.x,y:area.position.y,width:area.size.width as i32,height:area.size.height as i32},(28.0*factor)as i32)
+        let threshold=(28.0*factor)as i32;
+        let bounds=monitor.position();
+        let bounds_size=monitor.size();
+        let cursor_edge=cursor.and_then(|point|dock::nearest_cursor(point,
+            dock::Rect{x:bounds.x,y:bounds.y,width:bounds_size.width as i32,height:bounds_size.height as i32},threshold));
+        cursor_edge.or_else(||dock::nearest(dock::Rect{x:position.x,y:position.y,width:size.width as i32,height:size.height as i32},
+            dock::Rect{x:area.position.x,y:area.position.y,width:area.size.width as i32,height:area.size.height as i32},threshold))
     });
     if let Some(edge)=edge {state.layout.lock().map_err(|e|e.to_string())?.edge=edge;}
     else {state.layout.lock().map_err(|e|e.to_string())?.mode="hud".into();}
